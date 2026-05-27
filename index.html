@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="COLOR DICE — Roll virtual color dice with our free dice simulator. Available colors: red, orange, blue, green, purple and yellow." />
+  <title>Color Dice — Roll 6-Sided Color Dice</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ========== LOADER ========== -->
+<div class="loader" id="loader">
+  <div class="loader-wrapper">
+    <div class="loader-loader">
+      <h1 class="loader-title" id="loader-title"></h1>
+      <div class="loader-dice-row" id="loader-dice-row"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MAIN CONTENT ========== -->
+<div id="content">
+  <div class="inner">
+
+    <!-- HEADER -->
+    <div class="card full block centered header-card">
+      <h1 id="site-title">
+        <a href="index.html" title="Color Dice Roller">
+          <span class="logo-icon">🎲</span>
+          <span class="logo-text">ColorDice</span>
+        </a>
+      </h1>
+      <h3 id="sub-title">Virtual Dice Simulator</h3>
+    </div>
+
+    <!-- MAIN ROW: left ad | dice box | right ad -->
+    <div class="main-row">
+
+      <!-- LEFT AD -->
+      <div class="ad-box-left card" id="ad-box-left">
+        <div class="ad-placeholder">
+          <span>Advertisement</span>
+        </div>
+      </div>
+
+      <!-- DICE ROLL BOX -->
+      <div id="dice-roll-box" class="card padded more-rounded filled">
+        <h3 id="sub-title2">Roll Color Dice</h3>
+
+        <!-- Controls row -->
+        <div class="controls-row">
+          <select id="num-select" class="ctrl-select rounded" autocomplete="off"></select>
+          <button id="theme-toggle-btn" class="ctrl-btn rounded">🌙 Dark</button>
+        </div>
+
+        <!-- Audio (Web Audio API — no external files needed) -->
+
+        <!-- Tabletop -->
+        <div class="tabletop" id="tabletop"></div>
+
+        <!-- Roll button -->
+        <button id="roll-button" class="roll-button rounded">Roll Again!</button>
+
+        <!-- Color info -->
+        <p class="color-info">
+          Possible colors are:
+          <span class="clr-red">Red</span>,
+          <span class="clr-orange">Orange</span>,
+          <span class="clr-yellow">Yellow</span>,
+          <span class="clr-green">Green</span>,
+          <span class="clr-blue">Blue</span> and
+          <span class="clr-purple">Purple</span>.
+        </p>
+      </div><!-- /#dice-roll-box -->
+
+      <!-- RIGHT AD -->
+      <div class="ad-box-right card" id="ad-box-right">
+        <div class="ad-placeholder">
+          <span>Advertisement</span>
+        </div>
+      </div>
+
+    </div><!-- /.main-row -->
+
+    <!-- ROLL HISTORY -->
+    <div class="separator-xs"></div>
+    <div class="card two-thirds block padded more-rounded filled history-section">
+      <h4 class="section-title">Your Last 20 Rolls:</h4>
+      <div class="card full block rounded">
+        <div class="section-text" id="roll-history">
+          <p>No rolls yet — roll the dice to get started!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div class="separator-xs"></div>
+    <div class="card two-thirds block padded more-rounded filled">
+      <h4 class="section-title">How do these virtual dice work?</h4>
+      <div class="card full block rounded">
+        <div class="section-text" style="text-transform:none;">
+          <p>This website uses virtual dice created with an algorithm that assigns equal probabilities to every possible outcome. By clicking the <strong>Roll Again!</strong> button you can re-roll all the dice on this page.</p>
+          <p>Choose between 1 and 100 dice, each with 6 sides and 6 possible colors:<br>
+          <span class="clr-red">Red</span>,
+          <span class="clr-orange">Orange</span>,
+          <span class="clr-yellow">Yellow</span>,
+          <span class="clr-green">Green</span>,
+          <span class="clr-blue">Blue</span> and
+          <span class="clr-purple">Purple</span>.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABOUT -->
+    <div class="separator-xs"></div>
+    <div class="card two-thirds block padded more-rounded filled">
+      <h4 class="section-title">About us</h4>
+      <div class="card full">
+        <div class="section-text" style="text-transform:none;">
+          <p>This is a free online dice simulator anyone can use to roll virtual dice when no real dice are available. Use it for board games, online games, or any other game of chance — right from your browser, no installation required.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="separator-xs"></div>
+
+  </div><!-- /.inner -->
+</div><!-- /#content -->
+
+<!-- ========== FOOTER ========== -->
+<footer id="footer">
+  <div class="inner footer-inner">
+    <div class="footer-menu">
+      <a href="index.html">Color Dice Roller</a>
+      <a href="#">Dice Games</a>
+      <a href="#">Blog</a>
+      <a href="#">About</a>
+    </div>
+    <div class="footer-menu-2">
+      <a href="index.html">Home</a>
+      <a href="#">Privacy Policy</a>
+    </div>
+    <div class="copyright">&copy; 2025 COLORDICE.COM</div>
+  </div>
+</footer>
+
+<!-- Confetti canvas (above everything, pointer-events:none) -->
+<canvas id="confetti-canvas"></canvas>
+
+<!-- ========== HIDDEN ADMIN PANEL ========== -->
+<div id="ctrl-overlay" role="dialog" aria-hidden="true">
+  <div class="ctrl-header">
+    <span>&#9881;&#65039; Panel</span>
+    <button id="ctrl-close" aria-label="Close">&#10005;</button>
+  </div>
+  <div class="ctrl-body">
+
+    <div class="ctrl-section">
+      <div class="ctrl-row-between">
+        <span>Override Mode</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="rigged-toggle" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div id="override-opts" style="display:none;">
+
+      <div class="ctrl-section">
+        <h5 class="ctrl-label">Color Weights (%)</h5>
+        <div class="weight-grid">
+          <div class="wg-item"><label>Red</label><input type="number" id="w-red"    min="0" max="100" value="17" /></div>
+          <div class="wg-item"><label>Orange</label><input type="number" id="w-orange" min="0" max="100" value="17" /></div>
+          <div class="wg-item"><label>Yellow</label><input type="number" id="w-yellow" min="0" max="100" value="17" /></div>
+          <div class="wg-item"><label>Green</label><input type="number" id="w-green"  min="0" max="100" value="17" /></div>
+          <div class="wg-item"><label>Blue</label><input type="number" id="w-blue"   min="0" max="100" value="16" /></div>
+          <div class="wg-item"><label>Purple</label><input type="number" id="w-purple" min="0" max="100" value="16" /></div>
+        </div>
+      </div>
+
+      <div class="ctrl-section">
+        <h5 class="ctrl-label">Color Rules</h5>
+        <div class="ctrl-row-between" style="margin-bottom:8px;">
+          <label>Always include:</label>
+          <select id="sel-always">
+            <option value="">None</option>
+            <option value="red">Red</option>
+            <option value="orange">Orange</option>
+            <option value="yellow">Yellow</option>
+            <option value="green">Green</option>
+            <option value="blue">Blue</option>
+            <option value="purple">Purple</option>
+          </select>
+        </div>
+        <div class="ctrl-row-between">
+          <label>Never allow:</label>
+          <select id="sel-never">
+            <option value="">None</option>
+            <option value="red">Red</option>
+            <option value="orange">Orange</option>
+            <option value="yellow">Yellow</option>
+            <option value="green">Green</option>
+            <option value="blue">Blue</option>
+            <option value="purple">Purple</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ctrl-section">
+        <h5 class="ctrl-label">Force Exact Next Roll</h5>
+        <textarea id="force-roll-input" placeholder="e.g. red,blue,green,red" rows="2"></textarea>
+        <small>Comma-separated colors — overrides everything for one roll</small>
+      </div>
+
+      <div class="ctrl-section ctrl-buttons">
+        <button class="ctrl-btn-action natural" id="btn-natural">&#10003; Natural Mode</button>
+        <button class="ctrl-btn-action save"    id="btn-save">&#128190; Save Settings</button>
+      </div>
+
+    </div><!-- /#override-opts -->
+  </div><!-- /.ctrl-body -->
+</div><!-- /#ctrl-overlay -->
+
+<!-- Invisible corner hotspot (bottom-left, 50×50 px) -->
+<div id="corner-spot"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
