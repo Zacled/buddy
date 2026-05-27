@@ -38,15 +38,38 @@ let cornerClicks = 0;
 let cornerTimer  = null;
 
 /* ─────────── ENTRY ─────────── */
+let deferredInstallPrompt = null;
+
 document.addEventListener('DOMContentLoaded', () => {
   loadPersistedState();
   buildNumSelect();
   initSelects();
   initLoader();
   initRollButton();
+  initInstallButton();
   initAdminPanel();
   renderHistory();
   performRoll(false, false);
+});
+
+function initInstallButton() {
+  const btn = document.getElementById('install-button');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+    } else {
+      btn.querySelector('.install-subtitle').textContent =
+        'Use your browser menu → "Install app" / "Add to Home Screen"';
+    }
+  });
+}
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
 });
 
 /* ─────────── PERSIST ─────────── */

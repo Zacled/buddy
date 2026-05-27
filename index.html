@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="description" content="COLOR DICE — Roll virtual color dice with our free dice simulator. Available colors: red, orange, yellow, green, blue and purple." />
-  <title>Color Dice — Roll 6-Sided Color Dice | Online-Dice</title>
+  <meta name="description" content="ONLINE DICE — Roll virtual color dice with our free dice simulator." />
+  <title>Online Dice — Roll Virtual Color Dice</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -13,43 +14,41 @@
 <div class="loader" id="loader">
   <div class="loader-wrapper">
     <div class="loader-loader">
-      <h1 class="loader-title" id="loader-title"></h1>
+      <h2 class="loader-title" id="loader-title"></h2>
       <div class="loader-dice-row" id="loader-dice-row"></div>
     </div>
   </div>
 </div>
 
-<!-- MAIN CONTENT -->
+<!-- MAIN -->
 <div id="content">
   <div class="inner">
 
-    <!-- HEADER -->
-    <div class="card full block centered header-card">
-      <h1 id="site-title">
-        <a href="index.html" title="Online Dice">
-          <span class="logo-online">Online</span><span class="logo-dot">·</span><span class="logo-dice">Dice</span>
-        </a>
-      </h1>
-      <h3 id="sub-title">Virtual Dice Simulator</h3>
-    </div>
+    <!-- LOGO -->
+    <h1 id="site-title">
+      <a href="index.html" title="Online Dice">
+        <span class="logo-text" data-text="ONLINE DICE">ONLINE DICE</span>
+      </a>
+    </h1>
 
-    <!-- DICE ROLL BOX -->
-    <div id="dice-roll-box" class="card full padded more-rounded filled">
-      <h3 id="sub-title2">Roll Color Dice</h3>
+    <!-- DICE CARD -->
+    <div id="dice-roll-box" class="card">
+      <h3 id="sub-title2">Choose Your Dice</h3>
 
       <div class="controls-row">
-        <select id="num-select" class="ctrl-select rounded" autocomplete="off"></select>
-        <select id="type-select" class="ctrl-select rounded" autocomplete="off">
-          <option value="d4">4-sided</option>
-          <option value="d6">6-sided</option>
-          <option value="d8">8-sided</option>
-          <option value="d10">10-sided</option>
-          <option value="d12">12-sided</option>
-          <option value="d20">20-sided</option>
-          <option value="color-dice" selected>Color Dice</option>
+        <select id="num-select" class="ctrl-select" autocomplete="off"></select>
+        <select id="type-select" class="ctrl-select" autocomplete="off">
+          <option value="d4">4-Sided</option>
+          <option value="d6" selected>6-Sided</option>
+          <option value="d8">8-Sided</option>
+          <option value="d10">10-Sided</option>
+          <option value="d12">12-Sided</option>
+          <option value="d20">20-Sided</option>
+          <option value="color-dice">Color Dice</option>
         </select>
-        <select id="theme-select" class="ctrl-select rounded" autocomplete="off">
-          <option value="blue" selected>Blue</option>
+        <select id="theme-select" class="ctrl-select" autocomplete="off">
+          <option value="" disabled selected>Select Theme</option>
+          <option value="blue">Blue</option>
           <option value="green">Green</option>
           <option value="red">Red</option>
           <option value="bw">B&amp;W</option>
@@ -58,7 +57,12 @@
 
       <div class="tabletop" id="tabletop"></div>
 
-      <button id="roll-button" class="roll-button rounded">Roll Again !</button>
+      <button id="roll-button" class="roll-button">Roll Again !</button>
+
+      <button id="install-button" class="install-button">
+        Install App
+        <span class="install-subtitle">Fewer ads &amp; instant access.</span>
+      </button>
 
       <p class="color-info">
         Possible colors are:
@@ -71,25 +75,25 @@
       </p>
     </div>
 
-    <!-- ROLL HISTORY -->
+    <!-- HISTORY -->
     <div class="separator-xs"></div>
-    <div class="card full block padded more-rounded filled history-section">
-      <h4 class="section-title">Your Last 20 Rolls:</h4>
-      <div class="card full block rounded">
+    <div class="card">
+      <h4 class="section-title">Your Last 20 Rolls</h4>
+      <div class="inner-panel">
         <div class="section-text" id="roll-history">
           <p>No rolls yet — roll the dice to get started!</p>
         </div>
       </div>
     </div>
 
-    <!-- HOW IT WORKS -->
+    <!-- INFO -->
     <div class="separator-xs"></div>
-    <div class="card full block padded more-rounded filled">
+    <div class="card">
       <h4 class="section-title">How do these virtual dice work?</h4>
-      <div class="card full block rounded">
+      <div class="inner-panel">
         <div class="section-text">
-          <p>This website uses virtual dice created with an algorithm that assigns equal probabilities to every possible outcome. By clicking on the 'Roll Again' button you can re-roll all the dice on this page.</p>
-          <p>This page allows you to choose any number of dice between 1 and 100, each having 6 sides and 6 possible colors:<br>
+          <p>This website uses virtual dice created with an algorithm that assigns equal probabilities to every possible outcome. By clicking on the <strong>Roll Again</strong> button you can re-roll all the dice on this page.</p>
+          <p>Choose any number of dice between 1 and 100, each having 6 sides and 6 possible colors:<br>
           <span class="clr-red">Red</span>, <span class="clr-orange">Orange</span>, <span class="clr-yellow">Yellow</span>,
           <span class="clr-green">Green</span>, <span class="clr-blue">Blue</span> and <span class="clr-purple">Purple</span>.</p>
         </div>
@@ -98,9 +102,9 @@
 
     <!-- ABOUT -->
     <div class="separator-xs"></div>
-    <div class="card full block padded more-rounded filled">
-      <h4 class="section-title">About us</h4>
-      <div class="card full">
+    <div class="card">
+      <h4 class="section-title">About</h4>
+      <div class="inner-panel">
         <div class="section-text">
           <p>Online-Dice is an online dice simulator that anyone can use to roll virtual dice when no real dice are available. With this free simulator you can roll dice for online games, board games, or any other game of chance.</p>
         </div>
