@@ -1,10 +1,9 @@
 'use strict';
 
 /* ============================================================
-   ONLINE DICE — vanilla JS clone
+   ONLINE DICE — fully self-contained JS
    ============================================================ */
 
-/* ---------- CONFIG ---------- */
 const COLORS = [
   { id:'red',    label:'Red',    hex:'#e74c3c' },
   { id:'orange', label:'Orange', hex:'#e67e22' },
@@ -17,17 +16,20 @@ const COLOR_MAP = Object.fromEntries(COLORS.map(c => [c.id, c]));
 
 const DIE_FACES = { d4:4, d6:6, d8:8, d10:10, d12:12, d20:20 };
 
+/* Pip layouts for d6 — which grid positions are lit for each face */
+const PIP_LAYOUTS = {
+  1: ['mc'],
+  2: ['tl', 'br'],
+  3: ['tl', 'mc', 'br'],
+  4: ['tl', 'tr', 'bl', 'br'],
+  5: ['tl', 'tr', 'mc', 'bl', 'br'],
+  6: ['tl', 'ml', 'bl', 'tr', 'mr', 'br'],
+};
+
 const HISTORY_MAX = 20;
 const HISTORY_SAVE_MAX_DICE = 6;
 const ANIM_DURATION = 700;
 const ANIM_TICK     = 75;
-
-const THEME_CSS = {
-  blue:   'https://www.online-dice.com/css/style.php',
-  green:  'https://www.online-dice.com/css/green.php',
-  red:    'https://www.online-dice.com/css/red.php',
-  bw:     'https://www.online-dice.com/css/bw.php',
-};
 
 /* ---------- STATE ---------- */
 let numDice    = 1;
@@ -77,7 +79,7 @@ function loadPersisted() {
   } catch (_) {}
   try {
     const t = localStorage.getItem('od_theme');
-    if (t && THEME_CSS[t]) { theme = t; setTheme(t); }
+    if (t) { theme = t; document.documentElement.setAttribute('data-theme', t); }
   } catch (_) {}
 }
 function saveSettings() {
@@ -95,23 +97,15 @@ function saveHistory() {
 
 /* ---------- LOADER ---------- */
 function initLoader() {
+  const loaderDie = document.getElementById('loader-die');
   let counter = 1;
-  const loaderDieIcon = document.querySelector('.loader-dice i');
   const tick = setInterval(() => {
-    if (loaderDieIcon) {
-      loaderDieIcon.className = `df-solid-small-dot-d6-${counter} rounded-dice`;
-    }
+    renderPipDie(loaderDie, counter);
     counter = counter === 6 ? 1 : counter + 1;
-  }, 75);
-
+  }, 90);
   setTimeout(() => {
     clearInterval(tick);
-    const titleEl = document.querySelector('.loader-title');
-    const diceEl  = document.querySelector('.loader-dice');
-    const loader  = document.querySelector('.loader');
-    if (titleEl) titleEl.style.display = 'none';
-    if (diceEl)  diceEl.style.visibility = 'hidden';
-    if (loader)  loader.classList.add('hide');
+    document.getElementById('loader').classList.add('hide');
   }, 1250);
 }
 
@@ -136,35 +130,20 @@ function initSelects() {
   typeSel.value = diceType;
   typeSel.addEventListener('change', () => {
     diceType = typeSel.value;
+    document.getElementById('color-info').style.display =
+      diceType === 'color-dice' ? 'block' : 'none';
     performRoll(true);
   });
 
   const themeSel = document.getElementById('theme-select');
   themeSel.addEventListener('change', () => {
-    const t = themeSel.value;
-    if (THEME_CSS[t]) {
-      theme = t;
-      setTheme(t);
-      try { localStorage.setItem('od_theme', t); } catch (_) {}
-    }
+    theme = themeSel.value;
+    document.documentElement.setAttribute('data-theme', theme);
+    try { localStorage.setItem('od_theme', theme); } catch (_) {}
   });
 }
 
-function setTheme(t) {
-  const link = document.getElementById('theme-css');
-  if (link) link.href = THEME_CSS[t];
-}
-
 /* ---------- ROLL LOGIC ---------- */
-function rollOnePip(maxFace) {
-  // pick uniform 1..maxFace, optionally forced
-  if (overrideMode && overrideForcePip && diceType === 'd6') {
-    const p = parseInt(overrideForcePip, 10);
-    if (p >= 1 && p <= 6) return p;
-  }
-  return Math.floor(Math.random() * maxFace) + 1;
-}
-
 function pickColor() {
   if (!overrideMode) return COLORS[Math.floor(Math.random() * COLORS.length)];
   const pool = COLORS.filter(c => c.id !== overrideNever);
@@ -179,9 +158,16 @@ function pickColor() {
   return pool[pool.length - 1];
 }
 
+function rollOnePip(maxFace) {
+  if (overrideMode && overrideForcePip && diceType === 'd6') {
+    const p = parseInt(overrideForcePip, 10);
+    if (p >= 1 && p <= 6) return p;
+  }
+  return Math.floor(Math.random() * maxFace) + 1;
+}
+
 function buildResults(n) {
   if (diceType === 'color-dice') {
-    // Forced-roll list
     if (overrideMode && overrideForce.trim()) {
       const forced = overrideForce.split(',').map(s => s.trim().toLowerCase())
         .map(id => COLOR_MAP[id]).filter(Boolean);
@@ -200,10 +186,8 @@ function buildResults(n) {
     return results.map(c => ({ type:'color', color:c }));
   }
 
-  // Numeric dice (d4..d20)
   const maxFace = DIE_FACES[diceType] || 6;
 
-  // Forced-roll list for pips
   if (overrideMode && overrideForce.trim()) {
     const forced = overrideForce.split(',').map(s => parseInt(s.trim(), 10))
       .filter(v => v >= 1 && v <= maxFace);
@@ -219,10 +203,7 @@ function buildResults(n) {
 
 /* ---------- ROLL + ANIMATION ---------- */
 function initRollButton() {
-  document.getElementById('roll-button').addEventListener('click', e => {
-    e.preventDefault();
-    performRoll(true);
-  });
+  document.getElementById('roll-button').addEventListener('click', () => performRoll(true));
 }
 
 function performRoll(animate) {
@@ -230,18 +211,18 @@ function performRoll(animate) {
   const results = buildResults(numDice);
 
   if (!animate) {
-    paintDice(results);
+    paintDice(results, false);
     recordRoll(results);
     return;
   }
 
   isRolling = true;
   const btn = document.getElementById('roll-button');
-  if (btn) btn.style.pointerEvents = 'none';
+  if (btn) btn.disabled = true;
 
   runShuffleAnimation(results, () => {
     isRolling = false;
-    if (btn) btn.style.pointerEvents = '';
+    if (btn) btn.disabled = false;
     recordRoll(results);
     checkConfetti(results);
   });
@@ -254,45 +235,63 @@ function runShuffleAnimation(finalResults, onDone) {
     tabletop.innerHTML = '';
     finalResults.forEach(r => {
       if (r.type === 'color') {
-        const rand = COLORS[Math.floor(Math.random() * COLORS.length)];
-        tabletop.appendChild(makeDieEl({ type:'color', color: rand }));
+        tabletop.appendChild(makeDieEl({ type:'color', color: COLORS[Math.floor(Math.random() * COLORS.length)] }));
       } else {
-        const rand = Math.floor(Math.random() * (DIE_FACES[diceType] || 6)) + 1;
-        tabletop.appendChild(makeDieEl({ type:'pip', pip: rand }));
+        const max = DIE_FACES[diceType] || 6;
+        tabletop.appendChild(makeDieEl({ type:'pip', pip: Math.floor(Math.random() * max) + 1 }));
       }
     });
     elapsed += ANIM_TICK;
     if (elapsed >= ANIM_DURATION) {
       clearInterval(tick);
-      paintDice(finalResults);
+      paintDice(finalResults, true);
       onDone();
     }
   }, ANIM_TICK);
 }
 
-function paintDice(results) {
+function paintDice(results, animate) {
   const tabletop = document.getElementById('tabletop');
   tabletop.innerHTML = '';
-  results.forEach(r => tabletop.appendChild(makeDieEl(r)));
+  results.forEach((r, i) => {
+    const die = makeDieEl(r);
+    if (animate) {
+      die.classList.add('bouncing');
+      die.style.animationDelay = `${i * 40}ms`;
+      die.addEventListener('animationend', () => die.classList.remove('bouncing'), { once:true });
+    }
+    tabletop.appendChild(die);
+  });
 }
 
 function makeDieEl(r) {
-  // Use online-dice.com's dicefont icons via class names
-  const wrapper = document.createElement('div');
-  wrapper.className = 'dice-wrapper size-100 rounded-dice';
-
-  const i = document.createElement('i');
+  const die = document.createElement('div');
+  die.className = 'die';
   if (r.type === 'color') {
-    i.className = 'df-solid-small-dot-d6-1';
-    i.style.color = r.color.hex + '!important';
-    i.style.setProperty('color', r.color.hex, 'important');
-    wrapper.style.setProperty('background', '#fff', 'important');
+    die.classList.add('color');
+    const pip = document.createElement('div');
+    pip.className = 'pip';
+    die.style.setProperty('--color', r.color.hex);
+    die.style.setProperty('--color-glow', r.color.hex + '70');
+    die.appendChild(pip);
+  } else if (diceType === 'd6') {
+    renderPipDie(die, r.pip);
   } else {
-    const type = diceType.replace('color-dice', 'd6');
-    i.className = `df-solid-small-dot-${type}-${r.pip}`;
+    die.classList.add('numeric');
+    die.textContent = r.pip;
   }
-  wrapper.appendChild(i);
-  return wrapper;
+  return die;
+}
+
+function renderPipDie(dieEl, face) {
+  dieEl.className = 'die';
+  dieEl.innerHTML = '';
+  const layout = PIP_LAYOUTS[face] || PIP_LAYOUTS[1];
+  layout.forEach(pos => {
+    const pip = document.createElement('div');
+    pip.className = `pip ${pos}`;
+    dieEl.appendChild(pip);
+  });
 }
 
 /* ---------- HISTORY ---------- */
@@ -316,33 +315,41 @@ function renderHistory() {
   const frag = document.createDocumentFragment();
   rollHistory.forEach((roll, idx) => {
     const row = document.createElement('div');
-    row.className = 'cd-history-row';
+    row.className = 'history-row';
 
     const num = document.createElement('div');
-    num.className = 'cd-history-num';
+    num.className = 'history-num';
     num.textContent = `${idx + 1}.`;
     row.appendChild(num);
 
+    const dr = document.createElement('div');
+    dr.className = 'history-dice';
+
     roll.forEach(item => {
       const die = document.createElement('div');
-      die.className = 'dice-wrapper cd-history-die';
-
-      const i = document.createElement('i');
+      die.className = 'die history-die';
       if (item.c) {
         const color = COLOR_MAP[item.c];
-        i.className = 'df-solid-small-dot-d6-1';
-        i.style.animation = 'none';
-        i.style.setProperty('color', color.hex, 'important');
-        die.style.setProperty('background', '#fff', 'important');
+        die.classList.add('color');
+        die.style.setProperty('--color', color.hex);
+        const pip = document.createElement('div');
+        pip.className = 'pip';
+        die.appendChild(pip);
+      } else if ((item.t || 'd6') === 'd6') {
+        const layout = PIP_LAYOUTS[item.p] || PIP_LAYOUTS[1];
+        layout.forEach(pos => {
+          const pip = document.createElement('div');
+          pip.className = `pip ${pos}`;
+          die.appendChild(pip);
+        });
       } else {
-        const t = item.t || 'd6';
-        i.className = `df-solid-small-dot-${t}-${item.p}`;
-        i.style.animation = 'none';
+        die.classList.add('numeric');
+        die.textContent = item.p;
       }
-      die.appendChild(i);
-      row.appendChild(die);
+      dr.appendChild(die);
     });
 
+    row.appendChild(dr);
     frag.appendChild(row);
   });
 
@@ -350,9 +357,9 @@ function renderHistory() {
   container.appendChild(frag);
 
   const note = document.createElement('p');
-  note.style.fontSize = '0.8rem';
-  note.style.opacity = '0.7';
-  note.style.marginTop = '6px';
+  note.style.fontSize = '.78rem';
+  note.style.opacity = '.7';
+  note.style.marginTop = '8px';
   note.textContent = 'Please note: only dice rolls with up to 6 dice are saved.';
   container.appendChild(note);
 }
@@ -363,10 +370,10 @@ let confettiParticles = [];
 
 function checkConfetti(results) {
   if (results.length < 2) return;
-  const same = results.every(r => {
-    if (r.type === 'color') return r.color.id === results[0].color?.id;
-    return r.pip === results[0].pip;
-  });
+  const first = results[0];
+  const same = results.every(r =>
+    r.type === 'color' ? r.color?.id === first.color?.id : r.pip === first.pip
+  );
   if (same) setTimeout(launchConfetti, 450);
 }
 
@@ -380,16 +387,16 @@ function launchConfetti() {
     const color = COLORS[Math.floor(Math.random() * COLORS.length)];
     confettiParticles.push({
       x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height * 0.5 - canvas.height * 0.5,
+      y: Math.random() * canvas.height * .5 - canvas.height * .5,
       w: Math.random() * 10 + 5,
       h: Math.random() * 5 + 3,
       color: color.hex,
       rot: Math.random() * 360,
-      rotSpeed: (Math.random() - 0.5) * 6,
+      rotSpeed: (Math.random() - .5) * 6,
       vy: Math.random() * 3.5 + 1.8,
-      vx: (Math.random() - 0.5) * 1.5,
+      vx: (Math.random() - .5) * 1.5,
       life: 1,
-      decay: Math.random() * 0.008 + 0.004,
+      decay: Math.random() * .008 + .004,
     });
   }
   cancelAnimationFrame(confettiRAF);
@@ -468,11 +475,11 @@ function initAdminPanel() {
       const el = document.getElementById(`w-${id}`);
       if (el) overrideWeights[id] = Math.max(0, parseInt(el.value, 10) || 0);
     });
-    overrideAlways  = document.getElementById('sel-always').value;
-    overrideNever   = document.getElementById('sel-never').value;
-    overrideForce   = document.getElementById('force-roll-input').value;
+    overrideAlways   = document.getElementById('sel-always').value;
+    overrideNever    = document.getElementById('sel-never').value;
+    overrideForce    = document.getElementById('force-roll-input').value;
     overrideForcePip = document.getElementById('sel-force-pip').value;
-    overrideMode    = toggle.checked;
+    overrideMode     = toggle.checked;
     saveSettings();
     btnSave.textContent = '✓ Saved';
     setTimeout(() => { btnSave.textContent = '💾 Save Settings'; }, 1400);
