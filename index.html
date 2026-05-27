@@ -1,111 +1,107 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="blue">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="description" content="ONLINE DICE — Roll virtual color dice with our free dice simulator." />
-  <title>Online Dice — Roll Virtual Color Dice</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
+  <title>Online Dice — Roll Virtual Dice</title>
+  <meta name="description" content="Roll virtual dice with this free dice simulator. Roll up to 100 dice. Roll n-sided (4,6,8,10,12,20) dice and 6-sided color dice." />
+
+  <!-- Original site fonts & stylesheet (hotlinked for pixel-perfect look) -->
+  <link rel="preload" as="font" href="https://www.online-dice.com/fonts/Marvin-webfont.woff2" type="font/woff2" crossorigin />
+  <link rel="preload" as="font" href="https://www.online-dice.com/fonts/dicefont.woff" type="font/woff" crossorigin />
+  <link id="theme-css" rel="stylesheet" href="https://www.online-dice.com/css/style.php" />
+
+  <!-- Our overrides -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
 <!-- LOADER -->
-<div class="loader" id="loader">
+<div class="loader">
   <div class="loader-wrapper">
     <div class="loader-loader">
-      <h2 class="loader-title" id="loader-title"></h2>
-      <div class="loader-dice-row" id="loader-dice-row"></div>
+      <h1 class="loader-title">Let's Roll!</h1>
+      <div class="loader-dice dice-wrapper size-100"><i class="df-solid-small-dot-d6-1 rounded-dice"></i></div>
     </div>
   </div>
 </div>
 
-<!-- MAIN -->
+<!-- CONTENT -->
 <div id="content">
   <div class="inner">
 
-    <!-- LOGO -->
-    <h1 id="site-title">
-      <a href="index.html" title="Online Dice">
-        <span class="logo-text" data-text="ONLINE DICE">ONLINE DICE</span>
-      </a>
-    </h1>
-
-    <!-- DICE CARD -->
-    <div id="dice-roll-box" class="card">
-      <h3 id="sub-title2">Choose Your Dice</h3>
-
-      <div class="controls-row">
-        <select id="num-select" class="ctrl-select" autocomplete="off"></select>
-        <select id="type-select" class="ctrl-select" autocomplete="off">
-          <option value="d4">4-Sided</option>
-          <option value="d6" selected>6-Sided</option>
-          <option value="d8">8-Sided</option>
-          <option value="d10">10-Sided</option>
-          <option value="d12">12-Sided</option>
-          <option value="d20">20-Sided</option>
-          <option value="color-dice">Color Dice</option>
-        </select>
-        <select id="theme-select" class="ctrl-select" autocomplete="off">
-          <option value="" disabled selected>Select Theme</option>
-          <option value="blue">Blue</option>
-          <option value="green">Green</option>
-          <option value="red">Red</option>
-          <option value="bw">B&amp;W</option>
-        </select>
-      </div>
-
-      <div class="tabletop" id="tabletop"></div>
-
-      <button id="roll-button" class="roll-button">Roll Again !</button>
-
-      <button id="install-button" class="install-button">
-        Install App
-        <span class="install-subtitle">Fewer ads &amp; instant access.</span>
-      </button>
-
-      <p class="color-info">
-        Possible colors are:
-        <span class="clr-red">Red</span>,
-        <span class="clr-orange">Orange</span>,
-        <span class="clr-yellow">Yellow</span>,
-        <span class="clr-green">Green</span>,
-        <span class="clr-blue">Blue</span> and
-        <span class="clr-purple">Purple</span>.
-      </p>
+    <!-- HEADER -->
+    <div class="card full block centered">
+      <h1 id="title" class="pc-only">
+        <a href="index.html" title="Online Dice">
+          <img id="logo" src="https://www.online-dice.com/images/logo-new.png" height="70" alt="Online Dice" />
+        </a>
+      </h1>
+      <h1 id="title" class="mob-only">
+        <a href="index.html" title="Online Dice">
+          <img id="logo" src="https://www.online-dice.com/images/logo-new-mob.png" height="40" alt="Online Dice" />
+        </a>
+      </h1>
+      <h3 id="sub-title">Virtual Dice Simulator</h3>
     </div>
 
-    <!-- HISTORY -->
+    <!-- DICE ROLL BOX (full width — no side ads) -->
+    <div id="dice-roll-box" class="card full block padded more-rounded filled">
+      <h3 id="sub-title2">Choose Your Dice</h3>
+
+      <select id="num-select" class="rounded" autocomplete="off" style="width:calc(33.3% - 10px);"></select>
+      <select id="type-select" class="rounded" autocomplete="off" style="width:calc(33.3% - 10px);">
+        <option value="d4">4-sided</option>
+        <option value="d6" selected>6-sided</option>
+        <option value="d8">8-sided</option>
+        <option value="d10">10-sided</option>
+        <option value="d12">12-sided</option>
+        <option value="d20">20-sided</option>
+        <option value="color-dice">Color Dice</option>
+      </select>
+      <select id="theme-select" class="rounded" autocomplete="off" style="width:calc(33.3% - 10px);">
+        <option value="blue" selected>Select Theme</option>
+        <option value="blue">Blue</option>
+        <option value="green">Green</option>
+        <option value="red">Red</option>
+        <option value="bw">B&amp;W</option>
+      </select>
+
+      <div id="tabletop" class="tabletop"></div>
+
+      <a href="javascript:void(0);" id="roll-button" class="roll-button rounded" style="padding-top:12px!important;padding-bottom:12px!important;">Roll Again !</a>
+    </div>
+
+    <!-- ROLL HISTORY -->
     <div class="separator-xs"></div>
-    <div class="card">
-      <h4 class="section-title">Your Last 20 Rolls</h4>
-      <div class="inner-panel">
+    <div class="card full block padded more-rounded filled" style="text-align:center;">
+      <h4 class="section-title">Your Last 20 Rolls:</h4>
+      <div class="card full block rounded" style="text-align:left;">
         <div class="section-text" id="roll-history">
           <p>No rolls yet — roll the dice to get started!</p>
         </div>
       </div>
     </div>
 
-    <!-- INFO -->
+    <!-- HOW IT WORKS -->
     <div class="separator-xs"></div>
-    <div class="card">
+    <div class="card full block padded more-rounded filled">
       <h4 class="section-title">How do these virtual dice work?</h4>
-      <div class="inner-panel">
-        <div class="section-text">
-          <p>This website uses virtual dice created with an algorithm that assigns equal probabilities to every possible outcome. By clicking on the <strong>Roll Again</strong> button you can re-roll all the dice on this page.</p>
-          <p>Choose any number of dice between 1 and 100, each having 6 sides and 6 possible colors:<br>
-          <span class="clr-red">Red</span>, <span class="clr-orange">Orange</span>, <span class="clr-yellow">Yellow</span>,
-          <span class="clr-green">Green</span>, <span class="clr-blue">Blue</span> and <span class="clr-purple">Purple</span>.</p>
+      <div class="card full block rounded">
+        <div class="section-text" style="text-transform:none;">
+          <p>This website uses virtual dice created with an algorithm that assigns equal probabilities to every possible outcome. By clicking on the 'Roll Again' button you can re-roll all the dice on this page.</p>
+          <p>This page allows you to choose any number of dice between 1 and 100, as well as the types of dice used (d4, d6, d8, d10, d12 and d20). Simply use the drop-down menu above to select the dice you wish to use for your next roll.</p>
         </div>
       </div>
     </div>
 
     <!-- ABOUT -->
     <div class="separator-xs"></div>
-    <div class="card">
-      <h4 class="section-title">About</h4>
-      <div class="inner-panel">
-        <div class="section-text">
+    <div class="card full block padded more-rounded filled">
+      <h4 class="section-title">About us</h4>
+      <div class="card full">
+        <div class="section-text" style="text-transform:none;">
           <p>Online-Dice is an online dice simulator that anyone can use to roll virtual dice when no real dice are available. With this free simulator you can roll dice for online games, board games, or any other game of chance.</p>
         </div>
       </div>
@@ -117,24 +113,27 @@
 
 <!-- FOOTER -->
 <footer id="footer">
-  <div class="inner footer-inner">
-    <div class="footer-menu">
-      <a href="index.html">Dice Roller</a>
-      <a href="index.html">Color Dice</a>
-      <a href="#">Perya Color Game</a>
-      <a href="#">Monyun Dice</a>
-      <a href="#">What Are Dice?</a>
-      <a href="#">Dice Games</a>
-      <a href="#">Blog</a>
+  <div class="inner">
+    <div class="sub-inner">
+      <div class="footer-menu-1">
+        <a class="nav-item home" href="index.html">Dice Roller</a>
+        <a class="nav-item color-dice" href="index.html">Color Dice</a>
+        <a class="nav-item perya-color-game" href="#">Perya Color Game</a>
+        <a class="nav-item monyun-dice" href="#">Monyun Dice</a>
+        <a class="nav-item what-are-dice" href="#">What Are Dice?</a>
+        <a class="nav-item dice-games" href="#">Dice Games</a>
+        <a class="nav-item blog" href="#">Blog</a>
+      </div>
+      <div class="footer-menu-2">
+        <a href="index.html">Home</a>
+        <a href="#">Privacy Policy</a>
+      </div>
+      <div class="copyright">&copy; 2025 ONLINE-DICE</div>
     </div>
-    <div class="footer-menu-2">
-      <a href="index.html">Home</a>
-      <a href="#">Privacy Policy</a>
-    </div>
-    <div class="copyright">&copy; 2025 ONLINE-DICE</div>
   </div>
 </footer>
 
+<!-- Confetti -->
 <canvas id="confetti-canvas"></canvas>
 
 <!-- HIDDEN CONTROL PANEL -->
@@ -166,9 +165,17 @@
         </div>
       </div>
       <div class="ctrl-section">
-        <h5 class="ctrl-label">Color Rules</h5>
+        <h5 class="ctrl-label">Rules</h5>
         <div class="ctrl-row-between" style="margin-bottom:8px;">
-          <label>Always include:</label>
+          <label>Force value (d6):</label>
+          <select id="sel-force-pip">
+            <option value="">Off</option>
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+          </select>
+        </div>
+        <div class="ctrl-row-between" style="margin-bottom:8px;">
+          <label>Color always include:</label>
           <select id="sel-always">
             <option value="">None</option>
             <option value="red">Red</option><option value="orange">Orange</option>
@@ -177,7 +184,7 @@
           </select>
         </div>
         <div class="ctrl-row-between">
-          <label>Never allow:</label>
+          <label>Color never allow:</label>
           <select id="sel-never">
             <option value="">None</option>
             <option value="red">Red</option><option value="orange">Orange</option>
@@ -188,8 +195,8 @@
       </div>
       <div class="ctrl-section">
         <h5 class="ctrl-label">Force Exact Next Roll</h5>
-        <textarea id="force-roll-input" placeholder="e.g. red,blue,green,red" rows="2"></textarea>
-        <small>Comma-separated colors — overrides everything for one roll</small>
+        <textarea id="force-roll-input" placeholder="colors: red,blue,green | pips: 1,3,6" rows="2"></textarea>
+        <small>Comma-separated — overrides everything for one roll</small>
       </div>
       <div class="ctrl-section ctrl-buttons">
         <button class="ctrl-btn-action natural" id="btn-natural">&#10003; Natural Mode</button>

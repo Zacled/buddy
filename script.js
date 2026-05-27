@@ -1,138 +1,121 @@
 'use strict';
 
-/* ─────────── CONFIG ─────────── */
+/* ============================================================
+   ONLINE DICE — vanilla JS clone
+   ============================================================ */
+
+/* ---------- CONFIG ---------- */
 const COLORS = [
-  { id: 'red',    label: 'Red',    hex: '#e74c3c' },
-  { id: 'orange', label: 'Orange', hex: '#e67e22' },
-  { id: 'yellow', label: 'Yellow', hex: '#f0c000' },
-  { id: 'green',  label: 'Green',  hex: '#27ae60' },
-  { id: 'blue',   label: 'Blue',   hex: '#2980b9' },
-  { id: 'purple', label: 'Purple', hex: '#8e44ad' },
+  { id:'red',    label:'Red',    hex:'#e74c3c' },
+  { id:'orange', label:'Orange', hex:'#e67e22' },
+  { id:'yellow', label:'Yellow', hex:'#f0c000' },
+  { id:'green',  label:'Green',  hex:'#27ae60' },
+  { id:'blue',   label:'Blue',   hex:'#2980b9' },
+  { id:'purple', label:'Purple', hex:'#8e44ad' },
 ];
 const COLOR_MAP = Object.fromEntries(COLORS.map(c => [c.id, c]));
 
-const LOADER_MESSAGES = [
-  "What Color Will It Be?", "Rolling…", "Color Me Surprised!",
-  "Let's Roll!", "Feeling Lucky?", "Fingers Crossed…",
-  "Good Luck!", "Amazing!", "Let's Go!",
-];
+const DIE_FACES = { d4:4, d6:6, d8:8, d10:10, d12:12, d20:20 };
 
-const HISTORY_MAX           = 20;
+const HISTORY_MAX = 20;
 const HISTORY_SAVE_MAX_DICE = 6;
-const ANIM_SHUFFLE_DURATION = 640;
-const ANIM_SHUFFLE_INTERVAL = 75;
+const ANIM_DURATION = 700;
+const ANIM_TICK     = 75;
 
-/* ─────────── STATE ─────────── */
-let numDice     = 4;
-let isRolling   = false;
+const THEME_CSS = {
+  blue:   'https://www.online-dice.com/css/style.php',
+  green:  'https://www.online-dice.com/css/green.php',
+  red:    'https://www.online-dice.com/css/red.php',
+  bw:     'https://www.online-dice.com/css/bw.php',
+};
+
+/* ---------- STATE ---------- */
+let numDice    = 1;
+let diceType   = 'd6';
+let theme      = 'blue';
+let isRolling  = false;
 let rollHistory = [];
-let currentTheme = 'blue';
 
 let overrideMode    = false;
 let overrideWeights = { red:17, orange:17, yellow:17, green:17, blue:16, purple:16 };
 let overrideAlways  = '';
 let overrideNever   = '';
 let overrideForce   = '';
+let overrideForcePip = '';
 
 let cornerClicks = 0;
 let cornerTimer  = null;
 
-/* ─────────── ENTRY ─────────── */
-let deferredInstallPrompt = null;
-
+/* ---------- ENTRY ---------- */
 document.addEventListener('DOMContentLoaded', () => {
-  loadPersistedState();
+  loadPersisted();
   buildNumSelect();
   initSelects();
-  initLoader();
   initRollButton();
-  initInstallButton();
+  initLoader();
   initAdminPanel();
   renderHistory();
-  performRoll(false, false);
+  performRoll(false);
 });
 
-function initInstallButton() {
-  const btn = document.getElementById('install-button');
-  if (!btn) return;
-  btn.addEventListener('click', async () => {
-    if (deferredInstallPrompt) {
-      deferredInstallPrompt.prompt();
-      await deferredInstallPrompt.userChoice;
-      deferredInstallPrompt = null;
-    } else {
-      btn.querySelector('.install-subtitle').textContent =
-        'Use your browser menu → "Install app" / "Add to Home Screen"';
-    }
-  });
-}
-
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredInstallPrompt = e;
-});
-
-/* ─────────── PERSIST ─────────── */
-function loadPersistedState() {
+/* ---------- PERSIST ---------- */
+function loadPersisted() {
   try {
-    const h = localStorage.getItem('cd_history');
+    const h = localStorage.getItem('od_history');
     if (h) rollHistory = JSON.parse(h);
-  } catch (_) { rollHistory = []; }
-
+  } catch (_) {}
   try {
-    const s = localStorage.getItem('cd_settings');
+    const s = localStorage.getItem('od_settings');
     if (s) {
       const p = JSON.parse(s);
       overrideMode    = !!p.overrideMode;
       overrideWeights = p.weights || overrideWeights;
       overrideAlways  = p.always  || '';
       overrideNever   = p.never   || '';
+      overrideForcePip = p.forcePip || '';
     }
   } catch (_) {}
-
   try {
-    const t = localStorage.getItem('cd_theme');
-    if (t) {
-      currentTheme = t;
-      document.documentElement.setAttribute('data-theme', t);
-    }
+    const t = localStorage.getItem('od_theme');
+    if (t && THEME_CSS[t]) { theme = t; setTheme(t); }
   } catch (_) {}
 }
-function saveAdminSettings() {
+function saveSettings() {
   try {
-    localStorage.setItem('cd_settings', JSON.stringify({
+    localStorage.setItem('od_settings', JSON.stringify({
       overrideMode, weights: overrideWeights,
       always: overrideAlways, never: overrideNever,
+      forcePip: overrideForcePip,
     }));
   } catch (_) {}
 }
 function saveHistory() {
-  try { localStorage.setItem('cd_history', JSON.stringify(rollHistory)); } catch (_) {}
+  try { localStorage.setItem('od_history', JSON.stringify(rollHistory)); } catch (_) {}
 }
 
-/* ─────────── LOADER ─────────── */
+/* ---------- LOADER ---------- */
 function initLoader() {
-  const titleEl = document.getElementById('loader-title');
-  const diceRow = document.getElementById('loader-dice-row');
-
-  titleEl.textContent = LOADER_MESSAGES[Math.floor(Math.random() * LOADER_MESSAGES.length)];
-
-  const count = Math.min(numDice, 6);
-  for (let i = 0; i < count; i++) {
-    const die = document.createElement('div');
-    die.className = 'loader-die';
-    const pip = document.createElement('div');
-    pip.className = 'loader-die-pip';
-    die.appendChild(pip);
-    diceRow.appendChild(die);
-  }
+  let counter = 1;
+  const loaderDieIcon = document.querySelector('.loader-dice i');
+  const tick = setInterval(() => {
+    if (loaderDieIcon) {
+      loaderDieIcon.className = `df-solid-small-dot-d6-${counter} rounded-dice`;
+    }
+    counter = counter === 6 ? 1 : counter + 1;
+  }, 75);
 
   setTimeout(() => {
-    document.getElementById('loader').classList.add('hide');
+    clearInterval(tick);
+    const titleEl = document.querySelector('.loader-title');
+    const diceEl  = document.querySelector('.loader-dice');
+    const loader  = document.querySelector('.loader');
+    if (titleEl) titleEl.style.display = 'none';
+    if (diceEl)  diceEl.style.visibility = 'hidden';
+    if (loader)  loader.classList.add('hide');
   }, 1250);
 }
 
-/* ─────────── SELECTS ─────────── */
+/* ---------- SELECTS ---------- */
 function buildNumSelect() {
   const sel = document.getElementById('num-select');
   for (let i = 1; i <= 100; i++) {
@@ -144,35 +127,50 @@ function buildNumSelect() {
   }
   sel.addEventListener('change', () => {
     numDice = parseInt(sel.value, 10);
-    performRoll(true, true);
+    performRoll(true);
   });
 }
 
 function initSelects() {
-  const themeSel = document.getElementById('theme-select');
-  themeSel.value = currentTheme;
-  themeSel.addEventListener('change', () => {
-    currentTheme = themeSel.value;
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    try { localStorage.setItem('cd_theme', currentTheme); } catch (_) {}
+  const typeSel = document.getElementById('type-select');
+  typeSel.value = diceType;
+  typeSel.addEventListener('change', () => {
+    diceType = typeSel.value;
+    performRoll(true);
   });
 
-  const typeSel = document.getElementById('type-select');
-  typeSel.addEventListener('change', () => {
-    typeSel.value = 'color-dice';
+  const themeSel = document.getElementById('theme-select');
+  themeSel.addEventListener('change', () => {
+    const t = themeSel.value;
+    if (THEME_CSS[t]) {
+      theme = t;
+      setTheme(t);
+      try { localStorage.setItem('od_theme', t); } catch (_) {}
+    }
   });
 }
 
-/* ─────────── ROLL LOGIC ─────────── */
+function setTheme(t) {
+  const link = document.getElementById('theme-css');
+  if (link) link.href = THEME_CSS[t];
+}
+
+/* ---------- ROLL LOGIC ---------- */
+function rollOnePip(maxFace) {
+  // pick uniform 1..maxFace, optionally forced
+  if (overrideMode && overrideForcePip && diceType === 'd6') {
+    const p = parseInt(overrideForcePip, 10);
+    if (p >= 1 && p <= 6) return p;
+  }
+  return Math.floor(Math.random() * maxFace) + 1;
+}
+
 function pickColor() {
   if (!overrideMode) return COLORS[Math.floor(Math.random() * COLORS.length)];
-
   const pool = COLORS.filter(c => c.id !== overrideNever);
   if (!pool.length) return COLORS[Math.floor(Math.random() * COLORS.length)];
-
   const total = pool.reduce((s, c) => s + (overrideWeights[c.id] || 0), 0);
   if (total <= 0) return pool[Math.floor(Math.random() * pool.length)];
-
   let r = Math.random() * total;
   for (const c of pool) {
     r -= (overrideWeights[c.id] || 0);
@@ -182,104 +180,126 @@ function pickColor() {
 }
 
 function buildResults(n) {
-  if (overrideMode && overrideForce.trim()) {
-    const forced = overrideForce
-      .split(',')
-      .map(s => s.trim().toLowerCase())
-      .map(id => COLOR_MAP[id])
-      .filter(Boolean);
+  if (diceType === 'color-dice') {
+    // Forced-roll list
+    if (overrideMode && overrideForce.trim()) {
+      const forced = overrideForce.split(',').map(s => s.trim().toLowerCase())
+        .map(id => COLOR_MAP[id]).filter(Boolean);
+      overrideForce = '';
+      const fi = document.getElementById('force-roll-input');
+      if (fi) fi.value = '';
+      while (forced.length < n) forced.push(pickColor());
+      return forced.slice(0, n).map(c => ({ type:'color', color:c }));
+    }
+    const results = Array.from({ length:n }, () => pickColor());
+    if (overrideMode && overrideAlways && COLOR_MAP[overrideAlways]) {
+      if (!results.some(c => c.id === overrideAlways)) {
+        results[Math.floor(Math.random() * results.length)] = COLOR_MAP[overrideAlways];
+      }
+    }
+    return results.map(c => ({ type:'color', color:c }));
+  }
 
+  // Numeric dice (d4..d20)
+  const maxFace = DIE_FACES[diceType] || 6;
+
+  // Forced-roll list for pips
+  if (overrideMode && overrideForce.trim()) {
+    const forced = overrideForce.split(',').map(s => parseInt(s.trim(), 10))
+      .filter(v => v >= 1 && v <= maxFace);
     overrideForce = '';
     const fi = document.getElementById('force-roll-input');
     if (fi) fi.value = '';
-
-    while (forced.length < n) forced.push(pickColor());
-    return forced.slice(0, n);
+    while (forced.length < n) forced.push(rollOnePip(maxFace));
+    return forced.slice(0, n).map(p => ({ type:'pip', pip:p }));
   }
 
-  const results = Array.from({ length: n }, () => pickColor());
-
-  if (overrideMode && overrideAlways && COLOR_MAP[overrideAlways]) {
-    if (!results.some(c => c.id === overrideAlways)) {
-      results[Math.floor(Math.random() * results.length)] = COLOR_MAP[overrideAlways];
-    }
-  }
-
-  return results;
+  return Array.from({ length:n }, () => ({ type:'pip', pip: rollOnePip(maxFace) }));
 }
 
-/* ─────────── ROLL + ANIMATION ─────────── */
+/* ---------- ROLL + ANIMATION ---------- */
 function initRollButton() {
-  document.getElementById('roll-button').addEventListener('click', () => {
-    performRoll(true, true);
+  document.getElementById('roll-button').addEventListener('click', e => {
+    e.preventDefault();
+    performRoll(true);
   });
 }
 
-function performRoll(animate, withSound) {
+function performRoll(animate) {
   if (isRolling) return;
   const results = buildResults(numDice);
 
-  if (animate) {
-    isRolling = true;
-    document.getElementById('roll-button').disabled = true;
-    if (withSound) playRollSound();
-    runShuffleAnimation(results, () => {
-      isRolling = false;
-      document.getElementById('roll-button').disabled = false;
-      recordRoll(results);
-      checkConfetti(results);
-    });
-  } else {
-    paintDice(results, false);
+  if (!animate) {
+    paintDice(results);
     recordRoll(results);
+    return;
   }
+
+  isRolling = true;
+  const btn = document.getElementById('roll-button');
+  if (btn) btn.style.pointerEvents = 'none';
+
+  runShuffleAnimation(results, () => {
+    isRolling = false;
+    if (btn) btn.style.pointerEvents = '';
+    recordRoll(results);
+    checkConfetti(results);
+  });
 }
 
 function runShuffleAnimation(finalResults, onDone) {
   const tabletop = document.getElementById('tabletop');
   let elapsed = 0;
-  const tickId = setInterval(() => {
+  const tick = setInterval(() => {
     tabletop.innerHTML = '';
-    for (let i = 0; i < numDice; i++) {
-      tabletop.appendChild(makeDie(COLORS[Math.floor(Math.random() * COLORS.length)], true));
-    }
-    elapsed += ANIM_SHUFFLE_INTERVAL;
-    if (elapsed >= ANIM_SHUFFLE_DURATION) {
-      clearInterval(tickId);
-      paintDice(finalResults, true);
+    finalResults.forEach(r => {
+      if (r.type === 'color') {
+        const rand = COLORS[Math.floor(Math.random() * COLORS.length)];
+        tabletop.appendChild(makeDieEl({ type:'color', color: rand }));
+      } else {
+        const rand = Math.floor(Math.random() * (DIE_FACES[diceType] || 6)) + 1;
+        tabletop.appendChild(makeDieEl({ type:'pip', pip: rand }));
+      }
+    });
+    elapsed += ANIM_TICK;
+    if (elapsed >= ANIM_DURATION) {
+      clearInterval(tick);
+      paintDice(finalResults);
       onDone();
     }
-  }, ANIM_SHUFFLE_INTERVAL);
+  }, ANIM_TICK);
 }
 
-function paintDice(results, animate) {
+function paintDice(results) {
   const tabletop = document.getElementById('tabletop');
   tabletop.innerHTML = '';
-  results.forEach((color, i) => {
-    const die = makeDie(color, false);
-    if (animate) {
-      die.classList.add('bouncing');
-      die.style.animationDelay = `${i * 40}ms`;
-      die.addEventListener('animationend', () => die.classList.remove('bouncing'), { once: true });
-    }
-    tabletop.appendChild(die);
-  });
+  results.forEach(r => tabletop.appendChild(makeDieEl(r)));
 }
 
-function makeDie(color, rolling) {
+function makeDieEl(r) {
+  // Use online-dice.com's dicefont icons via class names
   const wrapper = document.createElement('div');
-  wrapper.className = 'die' + (rolling ? ' rolling' : '');
-  const pip = document.createElement('div');
-  pip.className = 'die-pip';
-  pip.style.background = color.hex;
-  pip.style.boxShadow  = `inset 0 -2px 4px rgba(0,0,0,0.18), 0 0 12px ${color.hex}55`;
-  wrapper.appendChild(pip);
+  wrapper.className = 'dice-wrapper size-100 rounded-dice';
+
+  const i = document.createElement('i');
+  if (r.type === 'color') {
+    i.className = 'df-solid-small-dot-d6-1';
+    i.style.color = r.color.hex + '!important';
+    i.style.setProperty('color', r.color.hex, 'important');
+    wrapper.style.setProperty('background', '#fff', 'important');
+  } else {
+    const type = diceType.replace('color-dice', 'd6');
+    i.className = `df-solid-small-dot-${type}-${r.pip}`;
+  }
+  wrapper.appendChild(i);
   return wrapper;
 }
 
-/* ─────────── HISTORY ─────────── */
+/* ---------- HISTORY ---------- */
 function recordRoll(results) {
-  rollHistory.unshift(results.map(c => c.id));
+  rollHistory.unshift(results.map(r =>
+    r.type === 'color' ? { c: r.color.id } : { p: r.pip, t: diceType }
+  ));
   if (rollHistory.length > HISTORY_MAX) rollHistory.length = HISTORY_MAX;
   if (numDice <= HISTORY_SAVE_MAX_DICE) saveHistory();
   renderHistory();
@@ -292,45 +312,64 @@ function renderHistory() {
     container.innerHTML = '<p>No rolls yet — roll the dice to get started!</p>';
     return;
   }
+
   const frag = document.createDocumentFragment();
   rollHistory.forEach((roll, idx) => {
     const row = document.createElement('div');
-    row.className = 'history-row';
+    row.className = 'cd-history-row';
 
     const num = document.createElement('div');
-    num.className = 'history-num';
+    num.className = 'cd-history-num';
     num.textContent = `${idx + 1}.`;
+    row.appendChild(num);
 
-    const diceRow = document.createElement('div');
-    diceRow.className = 'history-dice';
-    roll.forEach(id => {
-      const color = COLOR_MAP[id];
-      if (!color) return;
+    roll.forEach(item => {
       const die = document.createElement('div');
-      die.className = 'history-die';
-      const pip = document.createElement('div');
-      pip.className = 'mini-pip';
-      pip.style.background = color.hex;
-      die.appendChild(pip);
-      diceRow.appendChild(die);
+      die.className = 'dice-wrapper cd-history-die';
+
+      const i = document.createElement('i');
+      if (item.c) {
+        const color = COLOR_MAP[item.c];
+        i.className = 'df-solid-small-dot-d6-1';
+        i.style.animation = 'none';
+        i.style.setProperty('color', color.hex, 'important');
+        die.style.setProperty('background', '#fff', 'important');
+      } else {
+        const t = item.t || 'd6';
+        i.className = `df-solid-small-dot-${t}-${item.p}`;
+        i.style.animation = 'none';
+      }
+      die.appendChild(i);
+      row.appendChild(die);
     });
 
-    row.appendChild(num);
-    row.appendChild(diceRow);
     frag.appendChild(row);
   });
+
   container.innerHTML = '';
   container.appendChild(frag);
+
+  const note = document.createElement('p');
+  note.style.fontSize = '0.8rem';
+  note.style.opacity = '0.7';
+  note.style.marginTop = '6px';
+  note.textContent = 'Please note: only dice rolls with up to 6 dice are saved.';
+  container.appendChild(note);
 }
 
-/* ─────────── CONFETTI ─────────── */
+/* ---------- CONFETTI ---------- */
 let confettiRAF = null;
 let confettiParticles = [];
+
 function checkConfetti(results) {
-  if (results.length > 1 && results.every(c => c.id === results[0].id)) {
-    setTimeout(launchConfetti, 480);
-  }
+  if (results.length < 2) return;
+  const same = results.every(r => {
+    if (r.type === 'color') return r.color.id === results[0].color?.id;
+    return r.pip === results[0].pip;
+  });
+  if (same) setTimeout(launchConfetti, 450);
 }
+
 function launchConfetti() {
   const canvas = document.getElementById('confetti-canvas');
   const ctx = canvas.getContext('2d');
@@ -343,7 +382,7 @@ function launchConfetti() {
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height * 0.5 - canvas.height * 0.5,
       w: Math.random() * 10 + 5,
-      h: Math.random() * 5  + 3,
+      h: Math.random() * 5 + 3,
       color: color.hex,
       rot: Math.random() * 360,
       rotSpeed: (Math.random() - 0.5) * 6,
@@ -356,6 +395,7 @@ function launchConfetti() {
   cancelAnimationFrame(confettiRAF);
   drawConfetti(ctx, canvas);
 }
+
 function drawConfetti(ctx, canvas) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   confettiParticles = confettiParticles.filter(p => p.life > 0);
@@ -367,7 +407,8 @@ function drawConfetti(ctx, canvas) {
     ctx.fillStyle = p.color;
     ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
     ctx.restore();
-    p.x += p.vx; p.y += p.vy; p.rot += p.rotSpeed; p.life -= p.decay;
+    p.x += p.vx; p.y += p.vy;
+    p.rot += p.rotSpeed; p.life -= p.decay;
   });
   if (confettiParticles.length > 0) {
     confettiRAF = requestAnimationFrame(() => drawConfetti(ctx, canvas));
@@ -376,39 +417,7 @@ function drawConfetti(ctx, canvas) {
   }
 }
 
-/* ─────────── SOUND ─────────── */
-let audioCtx = null;
-function getAudioCtx() {
-  if (!audioCtx) {
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
-  }
-  return audioCtx;
-}
-function playRollSound() {
-  const ctx = getAudioCtx();
-  if (!ctx) return;
-  const now = ctx.currentTime;
-  const sr = ctx.sampleRate;
-  const dur = 0.28;
-  const buf = ctx.createBuffer(1, Math.floor(sr * dur), sr);
-  const d = buf.getChannelData(0);
-  for (let i = 0; i < d.length; i++) {
-    d[i] = (Math.random() * 2 - 1) * Math.exp(-(i / d.length) * 5);
-  }
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  const bpf = ctx.createBiquadFilter();
-  bpf.type = 'bandpass';
-  bpf.frequency.value = 600;
-  bpf.Q.value = 0.6;
-  const gain = ctx.createGain();
-  gain.gain.setValueAtTime(0.45, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
-  src.connect(bpf); bpf.connect(gain); gain.connect(ctx.destination);
-  src.start(now); src.stop(now + dur);
-}
-
-/* ─────────── HIDDEN PANEL ─────────── */
+/* ---------- HIDDEN ADMIN PANEL ---------- */
 function initAdminPanel() {
   const overlay    = document.getElementById('ctrl-overlay');
   const closeBtn   = document.getElementById('ctrl-close');
@@ -428,7 +437,7 @@ function initAdminPanel() {
   });
 
   document.addEventListener('keydown', e => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
       e.preventDefault();
       togglePanel();
     }
@@ -447,7 +456,8 @@ function initAdminPanel() {
     overrideAlways  = '';
     overrideNever   = '';
     overrideForce   = '';
-    try { localStorage.removeItem('cd_settings'); } catch (_) {}
+    overrideForcePip = '';
+    try { localStorage.removeItem('od_settings'); } catch (_) {}
     syncFormToState();
     btnNatural.textContent = '✓ Reset Done';
     setTimeout(() => { btnNatural.textContent = '✓ Natural Mode'; }, 1400);
@@ -458,15 +468,17 @@ function initAdminPanel() {
       const el = document.getElementById(`w-${id}`);
       if (el) overrideWeights[id] = Math.max(0, parseInt(el.value, 10) || 0);
     });
-    overrideAlways = document.getElementById('sel-always').value;
-    overrideNever  = document.getElementById('sel-never').value;
-    overrideForce  = document.getElementById('force-roll-input').value;
-    overrideMode   = toggle.checked;
-    saveAdminSettings();
+    overrideAlways  = document.getElementById('sel-always').value;
+    overrideNever   = document.getElementById('sel-never').value;
+    overrideForce   = document.getElementById('force-roll-input').value;
+    overrideForcePip = document.getElementById('sel-force-pip').value;
+    overrideMode    = toggle.checked;
+    saveSettings();
     btnSave.textContent = '✓ Saved';
     setTimeout(() => { btnSave.textContent = '💾 Save Settings'; }, 1400);
   });
 }
+
 function syncFormToState() {
   const toggle  = document.getElementById('rigged-toggle');
   const optsDiv = document.getElementById('override-opts');
@@ -478,22 +490,28 @@ function syncFormToState() {
   });
   const sa = document.getElementById('sel-always');
   const sn = document.getElementById('sel-never');
+  const sp = document.getElementById('sel-force-pip');
   if (sa) sa.value = overrideAlways;
   if (sn) sn.value = overrideNever;
-}
-function openPanel() {
-  document.getElementById('ctrl-overlay').classList.add('open');
-  document.getElementById('ctrl-overlay').setAttribute('aria-hidden', 'false');
-}
-function closePanel() {
-  document.getElementById('ctrl-overlay').classList.remove('open');
-  document.getElementById('ctrl-overlay').setAttribute('aria-hidden', 'true');
-}
-function togglePanel() {
-  document.getElementById('ctrl-overlay').classList.contains('open') ? closePanel() : openPanel();
+  if (sp) sp.value = overrideForcePip;
 }
 
-/* ─────────── RESIZE ─────────── */
+function openPanel() {
+  const o = document.getElementById('ctrl-overlay');
+  o.classList.add('open');
+  o.setAttribute('aria-hidden', 'false');
+}
+function closePanel() {
+  const o = document.getElementById('ctrl-overlay');
+  o.classList.remove('open');
+  o.setAttribute('aria-hidden', 'true');
+}
+function togglePanel() {
+  const o = document.getElementById('ctrl-overlay');
+  o.classList.contains('open') ? closePanel() : openPanel();
+}
+
+/* ---------- RESIZE ---------- */
 window.addEventListener('resize', () => {
   const c = document.getElementById('confetti-canvas');
   c.width = window.innerWidth;

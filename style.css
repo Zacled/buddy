@@ -1,466 +1,108 @@
-/* ===========================================================
-   ONLINE DICE — gold logo / yellow button design
-   =========================================================== */
+/* =================================================================
+   ONLINE DICE — overrides for the hotlinked online-dice.com stylesheet
+   - Hides all ad slots
+   - Makes the dice box full width (since side ads are gone)
+   - Styles the hidden admin panel
+   ================================================================= */
 
-/* ---- THEMES ---- */
-:root,
-[data-theme="blue"] {
-  --bg-top:        #6fc1ff;
-  --bg-bot:        #2d8fe6;
-  --card-fill:     rgba(135, 200, 255, 0.45);
-  --card-stroke:   rgba(255,255,255,0.55);
-  --inner-fill:    rgba(255,255,255,0.18);
-  --tabletop-bg:   transparent;
-  --select-bg:     #ffffff;
-  --select-text:   #1e78dc;
-  --section-text:  #ffffff;
-  --btn-yellow-1:  #fff4a3;
-  --btn-yellow-2:  #ffd83a;
-  --btn-yellow-3:  #ffc800;
-  --btn-yellow-sh: #c79400;
-  --btn-blue-1:    #6fb8ff;
-  --btn-blue-2:    #1e78dc;
-  --btn-blue-sh:   #0a4a96;
-  --radius:        20px;
-  --radius-lg:     26px;
-  --shadow:        0 8px 30px rgba(0,0,0,0.18);
-  --die-border:    #1e78dc;
-}
-[data-theme="green"] {
-  --bg-top:   #7ad799; --bg-bot: #1f9b50;
-  --card-fill: rgba(160,230,180,0.45);
-  --die-border: #1f9b50;
-}
-[data-theme="red"] {
-  --bg-top:   #ff8585; --bg-bot: #c33030;
-  --card-fill: rgba(255,180,180,0.45);
-  --die-border: #c33030;
-}
-[data-theme="bw"] {
-  --bg-top:   #888; --bg-bot: #222;
-  --card-fill: rgba(255,255,255,0.20);
-  --die-border: #222;
+/* ---------- HIDE ALL ADS ---------- */
+#ad-box-top,
+#ad-box-bottom,
+#ad-box-left,
+#ad-box-right,
+#fixed-ad-top,
+#fixed-bottom,
+.fixed-ad-top,
+#alt-ad,
+#alt-ad-top,
+ins.adsbygoogle,
+.adsbygoogle,
+#pwa-button {
+  display: none !important;
 }
 
-/* ---- RESET ---- */
-*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
-html { scroll-behavior:smooth; }
-body {
-  font-family: 'Fredoka', 'Marvin', 'Arial Black', sans-serif;
-  background-color: var(--bg-top);
-  background-image:
-    /* subtle game-icons pattern */
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320' viewBox='0 0 320 320'><g fill='%23ffffff' fill-opacity='0.10'><rect x='30' y='30' width='44' height='44' rx='8' transform='rotate(14 52 52)'/><circle cx='40' cy='44' r='3.5'/><circle cx='62' cy='38' r='3.5'/><circle cx='52' cy='62' r='3.5'/><rect x='230' y='220' width='52' height='52' rx='9' transform='rotate(-16 256 246)'/><circle cx='248' cy='234' r='3.5'/><circle cx='268' cy='258' r='3.5'/><rect x='130' y='80' width='36' height='50' rx='4' transform='rotate(10 148 105)'/><path d='M140 95 q4 -6 8 0 q4 -6 8 0 q0 8 -8 14 q-8 -6 -8 -14z' fill='%23ffffff' fill-opacity='0.18'/><circle cx='80' cy='220' r='10'/><path d='M70 232 L90 232 L96 268 L64 268 Z'/><circle cx='280' cy='90' r='14'/><circle cx='280' cy='90' r='8' fill='none' stroke='%23ffffff' stroke-opacity='0.20' stroke-width='2'/><path d='M180 240 L220 240 L215 252 L222 270 L178 270 L185 252 Z'/></g></svg>"),
-    linear-gradient(to bottom, var(--bg-top) 0%, var(--bg-bot) 100%);
-  background-attachment: fixed, fixed;
-  background-size: 320px 320px, 100% 100%;
-  background-repeat: repeat, no-repeat;
-  min-height: 100vh;
-  color: #fff;
-  overflow-x: hidden;
-}
-a { color:inherit; text-decoration:none; }
-button { font-family:inherit; cursor:pointer; }
-select { font-family:inherit; }
-
-/* ===========================================================
-   LOADER
-   =========================================================== */
-.loader {
-  position:fixed; inset:0;
-  background: linear-gradient(to bottom,#6fc1ff,#2d8fe6);
-  display:flex; align-items:center; justify-content:center;
-  z-index:9999;
-  transition: opacity 0.55s ease, visibility 0.55s ease;
-}
-.loader.hide { opacity:0; visibility:hidden; pointer-events:none; }
-.loader-loader { display:flex; flex-direction:column; align-items:center; gap:22px; }
-.loader-title {
-  color:#fff; font-size:1.8rem; font-weight:700;
-  text-shadow:0 3px 14px rgba(0,0,0,0.35);
-  text-transform: uppercase; letter-spacing:0.05em;
-  min-height:2.4rem;
-}
-.loader-dice-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
-.loader-die {
-  width:62px; height:62px;
-  background:#fff;
-  border: 3px solid #1e78dc;
-  border-radius:12px;
-  display:flex; align-items:center; justify-content:center;
-  box-shadow:0 5px 18px rgba(0,0,0,0.25);
-}
-.loader-die-pip {
-  width:24px; height:24px; border-radius:50%;
-  background:#cfe4f7;
+/* Adsense iframe injected by Google */
+iframe[id^="aswift_"],
+iframe[name^="google_ads"] {
+  display: none !important;
 }
 
-/* ===========================================================
-   LAYOUT
-   =========================================================== */
-.inner {
-  max-width: 720px;
+/* ---------- FULL-WIDTH DICE BOX ---------- */
+#dice-roll-box.two-thirds,
+#dice-roll-box.inline-block,
+#dice-roll-box {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: block !important;
+  float: none !important;
+  margin: 0 auto !important;
+}
+
+/* Pull other cards (history / about / how-it-works) to full width too */
+.card.two-thirds {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Keep the inner wrapper a sensible size */
+#content > .inner {
+  max-width: 720px !important;
+  padding-left: 14px;
+  padding-right: 14px;
   margin: 0 auto;
-  padding: 20px 16px 24px;
+}
+
+/* ---------- CENTER FOOTER NICELY ---------- */
+#footer .sub-inner {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 14px;
-}
-.separator-xs { height:4px; }
-
-/* ===========================================================
-   LOGO  (gold 3D text)
-   =========================================================== */
-#site-title { text-align: center; margin: 18px 0 22px; }
-#site-title a {
-  display:inline-block;
-  font-family: 'Bungee', 'Fredoka', impact, sans-serif;
-  font-size: clamp(2.6rem, 8vw, 5rem);
-  letter-spacing: 0.02em;
-  line-height: 1;
-}
-.logo-text {
-  display: inline-block;
-  color: #ffd54a;
-  background: linear-gradient(180deg, #fff6b8 0%, #ffe066 22%, #ffc933 50%, #f29a14 75%, #c66700 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 2.5px #5e2700;
-  filter:
-    drop-shadow(0 3px 0 #5e2700)
-    drop-shadow(0 4px 0 #5e2700)
-    drop-shadow(0 9px 8px rgba(0,0,0,0.40));
-  padding: 6px 4px 12px;
-}
-
-/* ===========================================================
-   CARDS
-   =========================================================== */
-.card {
-  background: var(--card-fill);
-  border: 2px solid var(--card-stroke);
-  border-radius: var(--radius-lg);
-  padding: 22px 22px 24px;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-.inner-panel {
-  background: rgba(255,255,255,0.15);
-  border-radius: 14px;
-  padding: 4px;
-}
-
-/* ===========================================================
-   DICE BOX TITLE
-   =========================================================== */
-#sub-title2 {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 1.35rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  text-align: center;
-  margin-bottom: 16px;
-  color: #fff;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.25);
-}
-
-/* ===========================================================
-   CONTROLS
-   =========================================================== */
-.controls-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 18px;
-}
-.ctrl-select {
-  padding: 12px 32px 12px 14px;
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 700;
-  background: var(--select-bg);
-  border: 2px solid rgba(255,255,255,0.85);
-  color: var(--select-text);
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231e78dc' stroke-width='2' fill='none'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  border-radius: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-  transition: transform 0.12s ease, box-shadow 0.15s ease;
-}
-.ctrl-select:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.18); }
-.ctrl-select option { background:#fff; color:#1e78dc; }
-.ctrl-select option:disabled { color:#9bb6d6; }
-
-/* ===========================================================
-   TABLETOP & DIE
-   =========================================================== */
-.tabletop {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: center;
-  align-items: center;
-  padding: 24px 12px;
-  background: transparent;
-  border-radius: 14px;
-  min-height: 120px;
-  margin-bottom: 22px;
-}
-.die {
-  width: 84px;
-  height: 84px;
-  background: #fff;
-  border: 3px solid var(--die-border);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
-  transition: transform 0.12s ease;
-}
-.die:hover { transform: scale(1.05); }
-.die-pip {
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: inset 0 -3px 5px rgba(0,0,0,0.20);
-}
-
-@keyframes kf-spin {
-  0%   { transform: rotateY(0deg)   scale(1);    }
-  25%  { transform: rotateY(180deg) scale(0.75); }
-  50%  { transform: rotateY(360deg) scale(1.1);  }
-  75%  { transform: rotateY(540deg) scale(0.85); }
-  100% { transform: rotateY(720deg) scale(1);    }
-}
-@keyframes kf-bounce {
-  0%   { transform: translateY(0)     scale(1);    }
-  35%  { transform: translateY(-18px) scale(1.08); }
-  60%  { transform: translateY(0)     scale(0.92); }
-  80%  { transform: translateY(-6px)  scale(1.03); }
-  100% { transform: translateY(0)     scale(1);    }
-}
-@keyframes kf-fadein {
-  from { opacity:0; transform: scale(0.6); }
-  to   { opacity:1; transform: scale(1);   }
-}
-.die.rolling  { animation: kf-spin   0.5s ease-in-out; }
-.die.bouncing { animation: kf-bounce 0.45s ease-out; }
-
-/* ===========================================================
-   ROLL AGAIN BUTTON  (yellow pill)
-   =========================================================== */
-.roll-button {
-  display: block;
-  width: 100%;
-  padding: 18px 30px;
-  font-family: 'Fredoka', 'Bungee', sans-serif;
-  font-size: 1.55rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  text-align: center;
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(0,0,0,0.18), 0 3px 6px rgba(0,0,0,0.25);
-  background: linear-gradient(180deg,
-                var(--btn-yellow-1) 0%,
-                var(--btn-yellow-2) 45%,
-                var(--btn-yellow-3) 100%);
-  border: 3px solid #ffffff;
-  border-radius: 16px;
-  box-shadow:
-    0 6px 0 var(--btn-yellow-sh),
-    0 10px 22px rgba(0,0,0,0.25);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
-  margin: 6px 0 4px;
-}
-.roll-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 0 var(--btn-yellow-sh), 0 14px 28px rgba(0,0,0,0.30);
-}
-.roll-button:active {
-  transform: translateY(4px);
-  box-shadow: 0 2px 0 var(--btn-yellow-sh), 0 4px 8px rgba(0,0,0,0.25);
-}
-.roll-button:disabled { opacity:0.7; cursor:not-allowed; transform:none; }
-
-/* ===========================================================
-   INSTALL APP BUTTON (blue pill)
-   =========================================================== */
-.install-button {
-  display: block;
-  width: 100%;
-  margin: 14px 0 4px;
-  padding: 14px 22px;
-  font-family: 'Fredoka', sans-serif;
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  text-align: center;
-  color: #fff;
-  background: linear-gradient(180deg, var(--btn-blue-1) 0%, var(--btn-blue-2) 100%);
-  border: 3px solid #ffffff;
-  border-radius: 16px;
-  box-shadow:
-    0 5px 0 var(--btn-blue-sh),
-    0 8px 18px rgba(0,0,0,0.20);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
-}
-.install-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 7px 0 var(--btn-blue-sh), 0 11px 22px rgba(0,0,0,0.25);
-}
-.install-button:active {
-  transform: translateY(3px);
-  box-shadow: 0 2px 0 var(--btn-blue-sh), 0 4px 8px rgba(0,0,0,0.20);
-}
-.install-subtitle {
-  display: block;
-  margin-top: 4px;
-  font-size: 0.78rem;
-  font-style: italic;
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0;
-  opacity: 0.95;
-}
-
-/* ===========================================================
-   COLOR INFO
-   =========================================================== */
-.color-info {
-  font-family: 'Fredoka', Arial, sans-serif;
-  font-size: 0.85rem;
-  font-weight: 500;
-  text-align: center;
-  background: rgba(255,255,255,0.20);
-  border-radius: 8px;
-  padding: 8px 12px;
-  margin-top: 16px;
-  color: #fff;
-}
-.clr-red    { color:#ff5e5e; font-weight:700; }
-.clr-orange { color:#ffa033; font-weight:700; }
-.clr-yellow { color:#ffe14d; font-weight:700; }
-.clr-green  { color:#5de57c; font-weight:700; }
-.clr-blue   { color:#6fc0ff; font-weight:700; }
-.clr-purple { color:#cb8aff; font-weight:700; }
-
-/* ===========================================================
-   SECTIONS
-   =========================================================== */
-.section-title {
-  font-family: 'Fredoka', sans-serif;
-  color: #fff;
-  font-size: 1.05rem;
-  text-transform: uppercase;
-  letter-spacing: 0.10em;
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: 12px;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.25);
-}
-.section-text {
-  padding: 14px 16px;
-  font-family: 'Fredoka', Arial, sans-serif;
-  font-size: 0.95rem;
-  font-weight: 400;
-  line-height: 1.65;
-  color: #fff;
-}
-.section-text p { margin-bottom: 12px; }
-.section-text p:last-child { margin-bottom: 0; }
-.section-text strong { font-weight: 700; }
-
-/* ===========================================================
-   ROLL HISTORY
-   =========================================================== */
-.history-row {
-  display: flex; align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px dashed rgba(255,255,255,0.35);
-  gap: 8px;
-}
-.history-row:last-child { border-bottom: none; }
-.history-num {
-  width: 32px; text-align: right;
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.9rem; color: rgba(255,255,255,0.85);
-  flex-shrink: 0;
-}
-.history-dice { display:flex; flex-wrap:wrap; gap: 5px; }
-.history-die {
-  width: 34px; height: 34px;
-  background: #fff;
-  border: 2px solid var(--die-border);
-  border-radius: 6px;
-  display:flex; align-items:center; justify-content:center;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-}
-.mini-pip { width: 14px; height: 14px; border-radius: 50%; }
-
-/* ===========================================================
-   FOOTER
-   =========================================================== */
-#footer {
-  background: rgba(0,0,0,0.30);
-  padding: 24px 0 20px;
-  margin-top: 14px;
-}
-.footer-inner {
-  max-width: 720px; margin: 0 auto; padding: 0 14px;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  gap: 10px !important;
   text-align: center;
 }
-.footer-menu,
-.footer-menu-2 {
-  display: flex; flex-wrap: wrap;
-  justify-content: center; gap: 14px;
-}
-.footer-menu a,
-.footer-menu-2 a {
-  font-family: 'Fredoka', Arial, sans-serif;
-  color: rgba(255,255,255,0.85);
-  font-size: 0.88rem; font-weight: 500;
-  transition: color 0.2s;
-}
-.footer-menu a:hover,
-.footer-menu-2 a:hover { color: #fff; }
-.copyright {
-  font-family: 'Fredoka', Arial, sans-serif;
-  font-size: 0.75rem;
-  color: rgba(255,255,255,0.55);
-  margin-top: 6px; letter-spacing: 0.04em;
-}
 
-/* ===========================================================
-   CONFETTI CANVAS
-   =========================================================== */
+/* ---------- CONFETTI CANVAS ---------- */
 #confetti-canvas {
-  position: fixed; inset: 0;
-  width: 100%; height: 100%;
-  pointer-events: none; z-index: 5000;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5000;
 }
 
-/* ===========================================================
-   HIDDEN CONTROL PANEL
-   =========================================================== */
+/* ---------- ROLL HISTORY ROWS ---------- */
+.cd-history-row {
+  border-bottom: 1px dashed #fff;
+  padding-bottom: 5px;
+  margin-bottom: 5px;
+}
+.cd-history-row:last-child {
+  border-bottom: none;
+}
+.cd-history-num {
+  margin-right: 5px;
+  text-align: right;
+  width: 25px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.cd-history-die {
+  vertical-align: middle;
+  margin: 5px 2px;
+  font-size: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 5px !important;
+  border: 1px solid #fff !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================
+   HIDDEN CONTROL PANEL  (independent of imported CSS)
+   ============================================================ */
 #ctrl-overlay {
   position: fixed; bottom: 70px; right: 18px;
   width: 310px;
@@ -476,33 +118,40 @@ select { font-family:inherit; }
   font: 0.83rem Arial, sans-serif;
   overflow: hidden;
 }
-#ctrl-overlay.open { display:block; animation:kf-fadein 0.28s ease; }
+#ctrl-overlay.open {
+  display: block;
+  animation: cd-fadein 0.28s ease;
+}
+@keyframes cd-fadein {
+  from { opacity:0; transform: scale(0.6); }
+  to   { opacity:1; transform: scale(1); }
+}
 .ctrl-header {
-  display:flex; justify-content:space-between; align-items:center;
-  padding:11px 14px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 14px;
   border-bottom: 1px solid rgba(80,120,255,0.18);
-  font-weight:700; font-size:0.88rem;
+  font-weight: 700; font-size: 0.88rem;
   background: rgba(255,255,255,0.04);
 }
 #ctrl-close {
-  background:none; border:none; color:#888;
-  font-size:0.9rem; cursor:pointer;
-  padding:2px 7px; border-radius:4px;
+  background: none; border: none; color: #888;
+  font-size: 0.9rem; cursor: pointer;
+  padding: 2px 7px; border-radius: 4px;
   transition: background 0.2s, color 0.2s;
 }
-#ctrl-close:hover { background:rgba(255,255,255,0.1); color:#fff; }
-.ctrl-body { padding:14px; max-height:480px; overflow-y:auto; }
-.ctrl-body::-webkit-scrollbar { width:4px; }
-.ctrl-body::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:2px; }
+#ctrl-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.ctrl-body { padding: 14px; max-height: 480px; overflow-y: auto; }
+.ctrl-body::-webkit-scrollbar { width: 4px; }
+.ctrl-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
 .ctrl-section {
-  margin-bottom:14px; padding-bottom:14px;
-  border-bottom:1px solid rgba(255,255,255,0.07);
+  margin-bottom: 14px; padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
 }
-.ctrl-section:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
+.ctrl-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 .ctrl-label {
-  font-size:0.72rem; text-transform:uppercase;
-  letter-spacing:0.06em; color:#7090d0;
-  margin-bottom:9px; font-weight:700; display:block;
+  font-size: 0.72rem; text-transform: uppercase;
+  letter-spacing: 0.06em; color: #7090d0;
+  margin-bottom: 9px; font-weight: 700; display: block;
 }
 .ctrl-row-between { display:flex; justify-content:space-between; align-items:center; gap:8px; }
 .toggle-switch { position:relative; display:inline-block; width:42px; height:22px; flex-shrink:0; }
@@ -538,8 +187,7 @@ select { font-family:inherit; }
 }
 .ctrl-row-between select option { background:#0e1a2e; }
 #force-roll-input {
-  width:100%;
-  background:rgba(255,255,255,0.07);
+  width:100%; background:rgba(255,255,255,0.07);
   border:1px solid rgba(255,255,255,0.14);
   color:#ccd8f0; padding:7px 9px;
   border-radius:6px; font-size:0.78rem;
@@ -560,33 +208,15 @@ select { font-family:inherit; }
 .ctrl-btn-action.save { background:rgba(60,120,255,0.15); border-color:rgba(60,120,255,0.3); color:#88aaff; }
 .ctrl-btn-action.save:hover { background:rgba(60,120,255,0.25); }
 
-/* corner hotspot */
+/* Corner hotspot — invisible */
 #corner-spot {
-  position:fixed; bottom:0; left:0;
-  width:50px; height:50px; z-index:9990;
+  position: fixed;
+  bottom: 0; left: 0;
+  width: 50px; height: 50px;
+  z-index: 9990;
 }
 
-/* ===========================================================
-   RESPONSIVE
-   =========================================================== */
+/* Mobile tweak for admin panel */
 @media (max-width: 600px) {
-  #site-title a { font-size: 2.6rem; }
-  #sub-title2 { font-size: 1.1rem; }
-  .controls-row { grid-template-columns: 1fr; gap: 8px; }
-  .die { width: 64px; height: 64px; border-radius: 12px; border-width: 2px; }
-  .die-pip { width: 28px; height: 28px; }
-  .roll-button { font-size: 1.2rem; padding: 15px 20px; }
-  .install-button { font-size: 0.95rem; padding: 12px 18px; }
   #ctrl-overlay { width: calc(100vw - 22px); right: 11px; bottom: 11px; }
-  .loader-title { font-size: 1.4rem; }
-  .loader-die { width: 56px; height: 56px; border-radius: 11px; }
-  .loader-die-pip { width: 22px; height: 22px; }
-  .card { padding: 18px 16px 20px; }
-}
-
-@media (max-width: 400px) {
-  .die { width: 54px; height: 54px; border-radius: 10px; }
-  .die-pip { width: 24px; height: 24px; }
-  .history-die { width: 28px; height: 28px; }
-  .mini-pip { width: 12px; height: 12px; }
 }
