@@ -1,81 +1,55 @@
-/* ============================================================
-   COLOR DICE — script.js
-   ============================================================ */
-
 'use strict';
 
-/* ──────────────────────────────────────────────────────────────
-   1. CONSTANTS & CONFIG
-   ────────────────────────────────────────────────────────────── */
-
+/* ─────────── CONFIG ─────────── */
 const COLORS = [
-  { id: 'red',    label: 'Red',    hex: '#e74c3c', pip: '#e74c3c' },
-  { id: 'orange', label: 'Orange', hex: '#e67e22', pip: '#e67e22' },
-  { id: 'yellow', label: 'Yellow', hex: '#f0c000', pip: '#f0c000' },
-  { id: 'green',  label: 'Green',  hex: '#27ae60', pip: '#27ae60' },
-  { id: 'blue',   label: 'Blue',   hex: '#2980b9', pip: '#2980b9' },
-  { id: 'purple', label: 'Purple', hex: '#8e44ad', pip: '#8e44ad' },
+  { id: 'red',    label: 'Red',    hex: '#e74c3c' },
+  { id: 'orange', label: 'Orange', hex: '#e67e22' },
+  { id: 'yellow', label: 'Yellow', hex: '#f0c000' },
+  { id: 'green',  label: 'Green',  hex: '#27ae60' },
+  { id: 'blue',   label: 'Blue',   hex: '#2980b9' },
+  { id: 'purple', label: 'Purple', hex: '#8e44ad' },
 ];
-
 const COLOR_MAP = Object.fromEntries(COLORS.map(c => [c.id, c]));
 
 const LOADER_MESSAGES = [
-  "What Color Will It Be?",
-  "Rolling…",
-  "Color Me Surprised!",
-  "Let's Roll!",
-  "Feeling Lucky?",
-  "Fingers Crossed…",
-  "Good Luck!",
-  "Amazing!",
-  "Let's Go!",
+  "What Color Will It Be?", "Rolling…", "Color Me Surprised!",
+  "Let's Roll!", "Feeling Lucky?", "Fingers Crossed…",
+  "Good Luck!", "Amazing!", "Let's Go!",
 ];
 
-const HISTORY_MAX   = 20;
-const HISTORY_SAVE_MAX_DICE = 6; // only persist when ≤ 6 dice (matching original)
-const ANIM_SHUFFLE_DURATION = 640; // ms of random flicker before final reveal
-const ANIM_SHUFFLE_INTERVAL = 75;  // ms per frame during shuffle
+const HISTORY_MAX           = 20;
+const HISTORY_SAVE_MAX_DICE = 6;
+const ANIM_SHUFFLE_DURATION = 640;
+const ANIM_SHUFFLE_INTERVAL = 75;
 
-/* ──────────────────────────────────────────────────────────────
-   2. STATE
-   ────────────────────────────────────────────────────────────── */
-
+/* ─────────── STATE ─────────── */
 let numDice     = 4;
 let isRolling   = false;
-let rollHistory = [];   // array of string-id arrays, newest first
-let darkMode    = false;
+let rollHistory = [];
+let currentTheme = 'blue';
 
-// Admin / override state
-let overrideMode = false;
-let overrideWeights = { red: 17, orange: 17, yellow: 17, green: 17, blue: 16, purple: 16 };
+let overrideMode    = false;
+let overrideWeights = { red:17, orange:17, yellow:17, green:17, blue:16, purple:16 };
 let overrideAlways  = '';
 let overrideNever   = '';
-let overrideForce   = '';   // comma-separated color ids for NEXT roll only
+let overrideForce   = '';
 
-// Admin panel trigger counters
-let cornerClicks    = 0;
-let cornerTimer     = null;
+let cornerClicks = 0;
+let cornerTimer  = null;
 
-/* ──────────────────────────────────────────────────────────────
-   3. ENTRY POINT
-   ────────────────────────────────────────────────────────────── */
-
+/* ─────────── ENTRY ─────────── */
 document.addEventListener('DOMContentLoaded', () => {
   loadPersistedState();
   buildNumSelect();
+  initSelects();
   initLoader();
   initRollButton();
-  initThemeToggle();
   initAdminPanel();
   renderHistory();
-  // Initial roll (no animation, silent)
   performRoll(false, false);
 });
 
-/* ──────────────────────────────────────────────────────────────
-   4. PERSIST / RESTORE
-   ────────────────────────────────────────────────────────────── */
-
+/* ─────────── PERSIST ─────────── */
 function loadPersistedState() {
   try {
     const h = localStorage.getItem('cd_history');
@@ -85,50 +59,42 @@ function loadPersistedState() {
   try {
     const s = localStorage.getItem('cd_settings');
     if (s) {
-      const parsed = JSON.parse(s);
-      overrideMode    = !!parsed.overrideMode;
-      overrideWeights = parsed.weights   || overrideWeights;
-      overrideAlways  = parsed.always    || '';
-      overrideNever   = parsed.never     || '';
-      // forceRoll is intentionally NOT persisted across page loads
+      const p = JSON.parse(s);
+      overrideMode    = !!p.overrideMode;
+      overrideWeights = p.weights || overrideWeights;
+      overrideAlways  = p.always  || '';
+      overrideNever   = p.never   || '';
     }
   } catch (_) {}
 
   try {
-    darkMode = localStorage.getItem('cd_dark') === '1';
-    applyDarkMode(false);
+    const t = localStorage.getItem('cd_theme');
+    if (t) {
+      currentTheme = t;
+      document.documentElement.setAttribute('data-theme', t);
+    }
   } catch (_) {}
 }
-
 function saveAdminSettings() {
   try {
     localStorage.setItem('cd_settings', JSON.stringify({
-      overrideMode,
-      weights: overrideWeights,
-      always: overrideAlways,
-      never: overrideNever,
+      overrideMode, weights: overrideWeights,
+      always: overrideAlways, never: overrideNever,
     }));
   } catch (_) {}
 }
-
 function saveHistory() {
-  try {
-    localStorage.setItem('cd_history', JSON.stringify(rollHistory));
-  } catch (_) {}
+  try { localStorage.setItem('cd_history', JSON.stringify(rollHistory)); } catch (_) {}
 }
 
-/* ──────────────────────────────────────────────────────────────
-   5. LOADER
-   ────────────────────────────────────────────────────────────── */
-
+/* ─────────── LOADER ─────────── */
 function initLoader() {
   const titleEl = document.getElementById('loader-title');
-  const diceRow  = document.getElementById('loader-dice-row');
+  const diceRow = document.getElementById('loader-dice-row');
 
   titleEl.textContent = LOADER_MESSAGES[Math.floor(Math.random() * LOADER_MESSAGES.length)];
 
-  // Show numDice placeholder dice in the loader
-  const count = Math.min(numDice, 8); // cap at 8 for loader row
+  const count = Math.min(numDice, 6);
   for (let i = 0; i < count; i++) {
     const die = document.createElement('div');
     die.className = 'loader-die';
@@ -143,10 +109,7 @@ function initLoader() {
   }, 1250);
 }
 
-/* ──────────────────────────────────────────────────────────────
-   6. NUM SELECT
-   ────────────────────────────────────────────────────────────── */
-
+/* ─────────── SELECTS ─────────── */
 function buildNumSelect() {
   const sel = document.getElementById('num-select');
   for (let i = 1; i <= 100; i++) {
@@ -162,24 +125,32 @@ function buildNumSelect() {
   });
 }
 
-/* ──────────────────────────────────────────────────────────────
-   7. ROLL LOGIC
-   ────────────────────────────────────────────────────────────── */
+function initSelects() {
+  const themeSel = document.getElementById('theme-select');
+  themeSel.value = currentTheme;
+  themeSel.addEventListener('change', () => {
+    currentTheme = themeSel.value;
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    try { localStorage.setItem('cd_theme', currentTheme); } catch (_) {}
+  });
 
+  const typeSel = document.getElementById('type-select');
+  typeSel.addEventListener('change', () => {
+    typeSel.value = 'color-dice';
+  });
+}
+
+/* ─────────── ROLL LOGIC ─────────── */
 function pickColor() {
-  if (!overrideMode) {
-    return COLORS[Math.floor(Math.random() * COLORS.length)];
-  }
+  if (!overrideMode) return COLORS[Math.floor(Math.random() * COLORS.length)];
 
-  // Gather available colors (exclude "never")
   const pool = COLORS.filter(c => c.id !== overrideNever);
   if (!pool.length) return COLORS[Math.floor(Math.random() * COLORS.length)];
 
-  // Build weighted bucket
-  const totalWeight = pool.reduce((s, c) => s + (overrideWeights[c.id] || 0), 0);
-  if (totalWeight <= 0) return pool[Math.floor(Math.random() * pool.length)];
+  const total = pool.reduce((s, c) => s + (overrideWeights[c.id] || 0), 0);
+  if (total <= 0) return pool[Math.floor(Math.random() * pool.length)];
 
-  let r = Math.random() * totalWeight;
+  let r = Math.random() * total;
   for (const c of pool) {
     r -= (overrideWeights[c.id] || 0);
     if (r <= 0) return c;
@@ -188,7 +159,6 @@ function pickColor() {
 }
 
 function buildResults(n) {
-  // 1. Check force-roll override (consumes once)
   if (overrideMode && overrideForce.trim()) {
     const forced = overrideForce
       .split(',')
@@ -197,33 +167,25 @@ function buildResults(n) {
       .filter(Boolean);
 
     overrideForce = '';
-    const forceInput = document.getElementById('force-roll-input');
-    if (forceInput) forceInput.value = '';
+    const fi = document.getElementById('force-roll-input');
+    if (fi) fi.value = '';
 
-    // Pad or trim to match n
     while (forced.length < n) forced.push(pickColor());
     return forced.slice(0, n);
   }
 
-  // 2. Normal (possibly weighted) roll
   const results = Array.from({ length: n }, () => pickColor());
 
-  // 3. "Always include" rule: ensure at least one die shows the target color
   if (overrideMode && overrideAlways && COLOR_MAP[overrideAlways]) {
-    const hasIt = results.some(c => c.id === overrideAlways);
-    if (!hasIt) {
-      const idx = Math.floor(Math.random() * results.length);
-      results[idx] = COLOR_MAP[overrideAlways];
+    if (!results.some(c => c.id === overrideAlways)) {
+      results[Math.floor(Math.random() * results.length)] = COLOR_MAP[overrideAlways];
     }
   }
 
   return results;
 }
 
-/* ──────────────────────────────────────────────────────────────
-   8. ROLL + ANIMATION
-   ────────────────────────────────────────────────────────────── */
-
+/* ─────────── ROLL + ANIMATION ─────────── */
 function initRollButton() {
   document.getElementById('roll-button').addEventListener('click', () => {
     performRoll(true, true);
@@ -232,13 +194,11 @@ function initRollButton() {
 
 function performRoll(animate, withSound) {
   if (isRolling) return;
-
   const results = buildResults(numDice);
 
   if (animate) {
     isRolling = true;
     document.getElementById('roll-button').disabled = true;
-
     if (withSound) playRollSound();
     runShuffleAnimation(results, () => {
       isRolling = false;
@@ -255,16 +215,12 @@ function performRoll(animate, withSound) {
 function runShuffleAnimation(finalResults, onDone) {
   const tabletop = document.getElementById('tabletop');
   let elapsed = 0;
-
   const tickId = setInterval(() => {
-    // Flash random colors
     tabletop.innerHTML = '';
     for (let i = 0; i < numDice; i++) {
-      const rndColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-      tabletop.appendChild(makeDie(rndColor, true));
+      tabletop.appendChild(makeDie(COLORS[Math.floor(Math.random() * COLORS.length)], true));
     }
     elapsed += ANIM_SHUFFLE_INTERVAL;
-
     if (elapsed >= ANIM_SHUFFLE_DURATION) {
       clearInterval(tickId);
       paintDice(finalResults, true);
@@ -280,7 +236,7 @@ function paintDice(results, animate) {
     const die = makeDie(color, false);
     if (animate) {
       die.classList.add('bouncing');
-      die.style.animationDelay = `${i * 45}ms`;
+      die.style.animationDelay = `${i * 40}ms`;
       die.addEventListener('animationend', () => die.classList.remove('bouncing'), { once: true });
     }
     tabletop.appendChild(die);
@@ -290,20 +246,15 @@ function paintDice(results, animate) {
 function makeDie(color, rolling) {
   const wrapper = document.createElement('div');
   wrapper.className = 'die' + (rolling ? ' rolling' : '');
-
   const pip = document.createElement('div');
   pip.className = 'die-pip';
   pip.style.background = color.hex;
-  pip.style.boxShadow = `0 2px 8px ${color.hex}99`;
-
+  pip.style.boxShadow  = `inset 0 -2px 4px rgba(0,0,0,0.18), 0 0 12px ${color.hex}55`;
   wrapper.appendChild(pip);
   return wrapper;
 }
 
-/* ──────────────────────────────────────────────────────────────
-   9. HISTORY
-   ────────────────────────────────────────────────────────────── */
-
+/* ─────────── HISTORY ─────────── */
 function recordRoll(results) {
   rollHistory.unshift(results.map(c => c.id));
   if (rollHistory.length > HISTORY_MAX) rollHistory.length = HISTORY_MAX;
@@ -314,12 +265,10 @@ function recordRoll(results) {
 function renderHistory() {
   const container = document.getElementById('roll-history');
   if (!container) return;
-
   if (!rollHistory.length) {
     container.innerHTML = '<p>No rolls yet — roll the dice to get started!</p>';
     return;
   }
-
   const frag = document.createDocumentFragment();
   rollHistory.forEach((roll, idx) => {
     const row = document.createElement('div');
@@ -331,7 +280,6 @@ function renderHistory() {
 
     const diceRow = document.createElement('div');
     diceRow.className = 'history-dice';
-
     roll.forEach(id => {
       const color = COLOR_MAP[id];
       if (!color) return;
@@ -348,73 +296,56 @@ function renderHistory() {
     row.appendChild(diceRow);
     frag.appendChild(row);
   });
-
   container.innerHTML = '';
   container.appendChild(frag);
 }
 
-/* ──────────────────────────────────────────────────────────────
-   10. CONFETTI
-   ────────────────────────────────────────────────────────────── */
-
+/* ─────────── CONFETTI ─────────── */
 let confettiRAF = null;
 let confettiParticles = [];
-
 function checkConfetti(results) {
   if (results.length > 1 && results.every(c => c.id === results[0].id)) {
     setTimeout(launchConfetti, 480);
   }
 }
-
 function launchConfetti() {
   const canvas = document.getElementById('confetti-canvas');
   const ctx = canvas.getContext('2d');
-  canvas.width  = window.innerWidth;
+  canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-
   confettiParticles = [];
-  const count = 160;
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < 160; i++) {
     const color = COLORS[Math.floor(Math.random() * COLORS.length)];
     confettiParticles.push({
-      x:        Math.random() * canvas.width,
-      y:        Math.random() * canvas.height * 0.5 - canvas.height * 0.5,
-      w:        Math.random() * 10 + 5,
-      h:        Math.random() * 5 + 3,
-      color:    color.hex,
-      rot:      Math.random() * 360,
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height * 0.5 - canvas.height * 0.5,
+      w: Math.random() * 10 + 5,
+      h: Math.random() * 5  + 3,
+      color: color.hex,
+      rot: Math.random() * 360,
       rotSpeed: (Math.random() - 0.5) * 6,
-      vy:       Math.random() * 3.5 + 1.8,
-      vx:       (Math.random() - 0.5) * 1.5,
-      life:     1,
-      decay:    Math.random() * 0.008 + 0.004,
+      vy: Math.random() * 3.5 + 1.8,
+      vx: (Math.random() - 0.5) * 1.5,
+      life: 1,
+      decay: Math.random() * 0.008 + 0.004,
     });
   }
-
   cancelAnimationFrame(confettiRAF);
   drawConfetti(ctx, canvas);
 }
-
 function drawConfetti(ctx, canvas) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
   confettiParticles = confettiParticles.filter(p => p.life > 0);
-
   confettiParticles.forEach(p => {
     ctx.save();
     ctx.globalAlpha = p.life;
-    ctx.translate(p.x + p.w / 2, p.y + p.h / 2);
+    ctx.translate(p.x + p.w/2, p.y + p.h/2);
     ctx.rotate((p.rot * Math.PI) / 180);
     ctx.fillStyle = p.color;
-    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
     ctx.restore();
-
-    p.x   += p.vx;
-    p.y   += p.vy;
-    p.rot += p.rotSpeed;
-    p.life -= p.decay;
+    p.x += p.vx; p.y += p.vy; p.rot += p.rotSpeed; p.life -= p.decay;
   });
-
   if (confettiParticles.length > 0) {
     confettiRAF = requestAnimationFrame(() => drawConfetti(ctx, canvas));
   } else {
@@ -422,138 +353,65 @@ function drawConfetti(ctx, canvas) {
   }
 }
 
-/* ──────────────────────────────────────────────────────────────
-   11. SOUND (Web Audio API — no external files)
-   ────────────────────────────────────────────────────────────── */
-
+/* ─────────── SOUND ─────────── */
 let audioCtx = null;
-
 function getAudioCtx() {
   if (!audioCtx) {
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    } catch (_) {}
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
   }
   return audioCtx;
 }
-
 function playRollSound() {
   const ctx = getAudioCtx();
   if (!ctx) return;
-
-  // Layered short noise burst to simulate dice clatter
   const now = ctx.currentTime;
-  const sr  = ctx.sampleRate;
+  const sr = ctx.sampleRate;
   const dur = 0.28;
-  const frames = Math.floor(sr * dur);
-
-  // White-noise buffer
-  const buf = ctx.createBuffer(1, frames, sr);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < frames; i++) {
-    data[i] = (Math.random() * 2 - 1) * Math.exp(-(i / frames) * 5);
+  const buf = ctx.createBuffer(1, Math.floor(sr * dur), sr);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) {
+    d[i] = (Math.random() * 2 - 1) * Math.exp(-(i / d.length) * 5);
   }
-
   const src = ctx.createBufferSource();
   src.buffer = buf;
-
   const bpf = ctx.createBiquadFilter();
   bpf.type = 'bandpass';
   bpf.frequency.value = 600;
   bpf.Q.value = 0.6;
-
   const gain = ctx.createGain();
   gain.gain.setValueAtTime(0.45, now);
   gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
-
-  src.connect(bpf);
-  bpf.connect(gain);
-  gain.connect(ctx.destination);
-  src.start(now);
-  src.stop(now + dur);
-
-  // Second light tick slightly offset for stereo feel
-  setTimeout(() => {
-    try {
-      const ctx2 = getAudioCtx();
-      const buf2  = ctx2.createBuffer(1, Math.floor(sr * 0.12), sr);
-      const d2    = buf2.getChannelData(0);
-      for (let i = 0; i < d2.length; i++) {
-        d2[i] = (Math.random() * 2 - 1) * Math.exp(-(i / d2.length) * 8);
-      }
-      const s2 = ctx2.createBufferSource();
-      s2.buffer = buf2;
-      const g2 = ctx2.createGain();
-      g2.gain.setValueAtTime(0.2, ctx2.currentTime);
-      g2.gain.exponentialRampToValueAtTime(0.001, ctx2.currentTime + 0.12);
-      s2.connect(g2);
-      g2.connect(ctx2.destination);
-      s2.start();
-    } catch (_) {}
-  }, 120);
+  src.connect(bpf); bpf.connect(gain); gain.connect(ctx.destination);
+  src.start(now); src.stop(now + dur);
 }
 
-/* ──────────────────────────────────────────────────────────────
-   12. DARK MODE
-   ────────────────────────────────────────────────────────────── */
-
-function initThemeToggle() {
-  document.getElementById('theme-toggle-btn').addEventListener('click', () => {
-    darkMode = !darkMode;
-    try { localStorage.setItem('cd_dark', darkMode ? '1' : '0'); } catch (_) {}
-    applyDarkMode(true);
-  });
-}
-
-function applyDarkMode(transition) {
-  const root = document.documentElement;
-  if (darkMode) {
-    root.setAttribute('data-theme', 'dark');
-    const btn = document.getElementById('theme-toggle-btn');
-    if (btn) btn.textContent = '☀️ Light';
-  } else {
-    root.setAttribute('data-theme', 'light');
-    const btn = document.getElementById('theme-toggle-btn');
-    if (btn) btn.textContent = '🌙 Dark';
-  }
-}
-
-/* ──────────────────────────────────────────────────────────────
-   13. HIDDEN ADMIN / CONTROL PANEL
-   ────────────────────────────────────────────────────────────── */
-
+/* ─────────── HIDDEN PANEL ─────────── */
 function initAdminPanel() {
-  const overlay   = document.getElementById('ctrl-overlay');
-  const closeBtn  = document.getElementById('ctrl-close');
-  const toggle    = document.getElementById('rigged-toggle');
-  const optsDiv   = document.getElementById('override-opts');
+  const overlay    = document.getElementById('ctrl-overlay');
+  const closeBtn   = document.getElementById('ctrl-close');
+  const toggle     = document.getElementById('rigged-toggle');
+  const optsDiv    = document.getElementById('override-opts');
   const btnNatural = document.getElementById('btn-natural');
   const btnSave    = document.getElementById('btn-save');
-  const corner    = document.getElementById('corner-spot');
+  const corner     = document.getElementById('corner-spot');
 
-  // Restore persisted state into the form
   syncFormToState();
 
-  // Corner hotspot: 5 clicks within 2 s
   corner.addEventListener('click', () => {
     cornerClicks++;
     clearTimeout(cornerTimer);
     cornerTimer = setTimeout(() => { cornerClicks = 0; }, 2000);
-    if (cornerClicks >= 5) {
-      cornerClicks = 0;
-      openAdminPanel();
-    }
+    if (cornerClicks >= 5) { cornerClicks = 0; openPanel(); }
   });
 
-  // Keyboard: Ctrl+Shift+D
   document.addEventListener('keydown', e => {
     if (e.ctrlKey && e.shiftKey && e.key === 'D') {
       e.preventDefault();
-      toggleAdminPanel();
+      togglePanel();
     }
   });
 
-  closeBtn.addEventListener('click', closeAdminPanel);
+  closeBtn.addEventListener('click', closePanel);
 
   toggle.addEventListener('change', () => {
     overrideMode = toggle.checked;
@@ -562,7 +420,7 @@ function initAdminPanel() {
 
   btnNatural.addEventListener('click', () => {
     overrideMode    = false;
-    overrideWeights = { red: 17, orange: 17, yellow: 17, green: 17, blue: 16, purple: 16 };
+    overrideWeights = { red:17, orange:17, yellow:17, green:17, blue:16, purple:16 };
     overrideAlways  = '';
     overrideNever   = '';
     overrideForce   = '';
@@ -573,7 +431,6 @@ function initAdminPanel() {
   });
 
   btnSave.addEventListener('click', () => {
-    // Read weights
     ['red','orange','yellow','green','blue','purple'].forEach(id => {
       const el = document.getElementById(`w-${id}`);
       if (el) overrideWeights[id] = Math.max(0, parseInt(el.value, 10) || 0);
@@ -582,56 +439,40 @@ function initAdminPanel() {
     overrideNever  = document.getElementById('sel-never').value;
     overrideForce  = document.getElementById('force-roll-input').value;
     overrideMode   = toggle.checked;
-
     saveAdminSettings();
     btnSave.textContent = '✓ Saved';
     setTimeout(() => { btnSave.textContent = '💾 Save Settings'; }, 1400);
   });
 }
-
 function syncFormToState() {
   const toggle  = document.getElementById('rigged-toggle');
   const optsDiv = document.getElementById('override-opts');
-
   toggle.checked = overrideMode;
   optsDiv.style.display = overrideMode ? 'block' : 'none';
-
   ['red','orange','yellow','green','blue','purple'].forEach(id => {
     const el = document.getElementById(`w-${id}`);
     if (el) el.value = overrideWeights[id];
   });
-
-  const selAlways = document.getElementById('sel-always');
-  const selNever  = document.getElementById('sel-never');
-  if (selAlways) selAlways.value = overrideAlways;
-  if (selNever)  selNever.value  = overrideNever;
+  const sa = document.getElementById('sel-always');
+  const sn = document.getElementById('sel-never');
+  if (sa) sa.value = overrideAlways;
+  if (sn) sn.value = overrideNever;
 }
-
-function openAdminPanel() {
+function openPanel() {
   document.getElementById('ctrl-overlay').classList.add('open');
   document.getElementById('ctrl-overlay').setAttribute('aria-hidden', 'false');
 }
-
-function closeAdminPanel() {
+function closePanel() {
   document.getElementById('ctrl-overlay').classList.remove('open');
   document.getElementById('ctrl-overlay').setAttribute('aria-hidden', 'true');
 }
-
-function toggleAdminPanel() {
-  const overlay = document.getElementById('ctrl-overlay');
-  if (overlay.classList.contains('open')) {
-    closeAdminPanel();
-  } else {
-    openAdminPanel();
-  }
+function togglePanel() {
+  document.getElementById('ctrl-overlay').classList.contains('open') ? closePanel() : openPanel();
 }
 
-/* ──────────────────────────────────────────────────────────────
-   14. RESIZE — keep confetti canvas sized correctly
-   ────────────────────────────────────────────────────────────── */
-
+/* ─────────── RESIZE ─────────── */
 window.addEventListener('resize', () => {
-  const canvas = document.getElementById('confetti-canvas');
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
+  const c = document.getElementById('confetti-canvas');
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
 });
