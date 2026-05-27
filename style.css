@@ -10,7 +10,6 @@
   --bg-bot:        #1a6dc6;
   --card-fill:     rgba(0,80,170,0.32);
   --card-stroke:   rgba(255,255,255,0.55);
-  --inner-fill:    rgba(255,255,255,0.10);
   --die-pip:       #1e78dc;
   --die-border:    #1e78dc;
   --btn-y1:        #ffeb70;
@@ -45,8 +44,7 @@ body {
   font-family: 'Fredoka', 'Segoe UI', Arial, sans-serif;
   background-color: var(--bg-top);
   background-image:
-    /* faint white game-icons pattern */
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='340' viewBox='0 0 340 340'><g fill='%23ffffff' fill-opacity='0.10'><rect x='30' y='30' width='44' height='44' rx='8' transform='rotate(14 52 52)'/><circle cx='40' cy='44' r='3.5'/><circle cx='62' cy='38' r='3.5'/><circle cx='52' cy='62' r='3.5'/><rect x='240' y='235' width='54' height='54' rx='9' transform='rotate(-16 266 261)'/><circle cx='258' cy='250' r='3.5'/><circle cx='278' cy='275' r='3.5'/><rect x='140' y='80' width='36' height='52' rx='4' transform='rotate(10 158 106)'/><path d='M150 96 q4 -6 8 0 q4 -6 8 0 q0 8 -8 14 q-8 -6 -8 -14z' fill='%23ffffff' fill-opacity='0.16'/><circle cx='80' cy='220' r='10'/><path d='M70 232 L90 232 L96 268 L64 268 Z'/><circle cx='290' cy='100' r='14'/><circle cx='290' cy='100' r='8' fill='none' stroke='%23ffffff' stroke-opacity='0.20' stroke-width='2'/><path d='M190 250 L226 250 L221 262 L228 280 L184 280 L191 262 Z'/></g></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='340' viewBox='0 0 340 340'><g fill='%23ffffff' fill-opacity='0.10'><g transform='translate(50,50) rotate(15)'><rect x='-22' y='-22' width='44' height='44' rx='7'/><circle cx='-10' cy='-10' r='3'/><circle cx='10' cy='-10' r='3'/><circle cx='-10' cy='10' r='3'/><circle cx='10' cy='10' r='3'/><circle cx='0' cy='0' r='3'/></g><g transform='translate(265,255) rotate(-20)'><rect x='-26' y='-26' width='52' height='52' rx='8'/><circle cx='-12' cy='-12' r='3.5'/><circle cx='12' cy='12' r='3.5'/></g><g transform='translate(160,90) rotate(10)'><rect x='-18' y='-26' width='36' height='52' rx='4'/><path d='M-6 -10 q4 -7 8 0 q4 -7 8 0 q0 11 -8 17 q-8 -6 -8 -17z' fill='%23ffffff' fill-opacity='0.20'/></g><g transform='translate(285,75) rotate(-12)'><rect x='-15' y='-22' width='30' height='44' rx='3'/></g><g transform='translate(85,225)'><circle cx='0' cy='-14' r='11'/><path d='M-9 -3 L9 -3 L16 26 L-16 26 Z'/></g><g transform='translate(290,150)'><circle cx='0' cy='0' r='13'/><circle cx='0' cy='0' r='8' fill='none' stroke='%23ffffff' stroke-opacity='0.20' stroke-width='2'/></g><g transform='translate(200,280)'><rect x='-13' y='-22' width='26' height='3'/><rect x='-13' y='19' width='26' height='3'/><path d='M-10 -19 L10 -19 L0 0 L10 19 L-10 19 L0 0 Z'/></g><g transform='translate(45,300) rotate(22)'><rect x='-18' y='-7' width='36' height='14' rx='2'/><line x1='0' y1='-7' x2='0' y2='7' stroke='%23ffffff' stroke-opacity='0.40' stroke-width='1'/><circle cx='-10' cy='0' r='2'/><circle cx='6' cy='-2' r='1.5'/><circle cx='10' cy='2' r='1.5'/></g></g></svg>"),
     linear-gradient(to bottom, var(--bg-top) 0%, var(--bg-mid) 55%, var(--bg-bot) 100%);
   background-attachment: fixed, fixed;
   background-size: 340px 340px, 100% 100%;
@@ -92,25 +90,32 @@ select { font-family:inherit; }
 }
 
 /* =========================================================
-   LOGO  (gold 3D text — "ONLINE DICE")
+   LOGO — gold 3D "ONLINE DICE"
    ========================================================= */
-#title { text-align:center; margin: 18px 0 -4px; }
+#title { text-align:center; margin: 18px 0 -2px; }
 #title a { display:inline-block; }
 .logo-text {
   font-family: 'Bungee', 'Fredoka', impact, sans-serif;
   font-size: clamp(2.8rem, 9vw, 5.5rem);
-  letter-spacing: .015em;
+  letter-spacing: .02em;
   line-height: 1;
-  background: linear-gradient(180deg, #fff5b8 0%, #ffe066 22%, #ffc933 50%, #f29a14 76%, #b85800 100%);
+  background:
+    linear-gradient(180deg,
+      #fff7c2 0%,
+      #ffe066 22%,
+      #ffc73a 45%,
+      #f0941a 75%,
+      #b85800 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 2.5px #5a2400;
+  -webkit-text-stroke: 3px #5a2400;
   filter:
-    drop-shadow(0 3px 0 #5a2400)
-    drop-shadow(0 5px 0 #5a2400)
-    drop-shadow(0 9px 10px rgba(0,0,0,.45));
-  padding: 6px 6px 12px;
+    drop-shadow(0 2px 0 #5a2400)
+    drop-shadow(0 4px 0 #5a2400)
+    drop-shadow(0 6px 0 #5a2400)
+    drop-shadow(0 10px 12px rgba(0,0,0,.50));
+  padding: 6px 6px 14px;
   display: inline-block;
 }
 #sub-title {
@@ -142,7 +147,6 @@ select { font-family:inherit; }
   padding: 4px 6px;
 }
 
-/* DICE CARD TITLE */
 #sub-title2 {
   font-family: 'Fredoka', sans-serif;
   font-weight: 700;
@@ -188,11 +192,11 @@ select { font-family:inherit; }
 .ctrl-select option { background:#fff; color: var(--select-text); }
 
 /* =========================================================
-   TABLETOP & DICE
+   TABLETOP & DICE (absolute-positioned pips)
    ========================================================= */
 .tabletop {
   display: flex; flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
   justify-content: center;
   align-items: center;
   padding: 24px 12px;
@@ -200,7 +204,7 @@ select { font-family:inherit; }
   margin-bottom: 22px;
 }
 
-/* DIE — white rounded square with border */
+/* DIE BASE */
 .die {
   width: 84px;
   height: 84px;
@@ -208,52 +212,58 @@ select { font-family:inherit; }
   border: 3px solid var(--die-border);
   border-radius: 16px;
   position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows:    1fr 1fr 1fr;
-  padding: 14%;
-  gap: 6%;
-  box-shadow: 0 6px 16px rgba(0,0,0,.25);
+  box-shadow: 0 6px 16px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,1);
   transition: transform .12s ease;
 }
 .die:hover { transform: scale(1.05); }
+
+/* PIPS — absolute positioning, never miss a render */
 .die .pip {
-  width: 100%; height: 100%;
-  border-radius: 50%;
+  position: absolute;
+  width: 19%;
+  height: 19%;
   background: var(--die-pip);
+  border-radius: 50%;
   box-shadow: inset 0 -2px 3px rgba(0,0,0,.20);
 }
-/* Pip grid positions */
-.die .pip.tl { grid-column:1; grid-row:1; }
-.die .pip.tc { grid-column:2; grid-row:1; }
-.die .pip.tr { grid-column:3; grid-row:1; }
-.die .pip.ml { grid-column:1; grid-row:2; }
-.die .pip.mc { grid-column:2; grid-row:2; }
-.die .pip.mr { grid-column:3; grid-row:2; }
-.die .pip.bl { grid-column:1; grid-row:3; }
-.die .pip.bc { grid-column:2; grid-row:3; }
-.die .pip.br { grid-column:3; grid-row:3; }
+.die .pip.tl { top:   22%; left:  22%; transform: translate(-50%, -50%); }
+.die .pip.tc { top:   22%; left:  50%; transform: translate(-50%, -50%); }
+.die .pip.tr { top:   22%; left:  78%; transform: translate(-50%, -50%); }
+.die .pip.ml { top:   50%; left:  22%; transform: translate(-50%, -50%); }
+.die .pip.mc { top:   50%; left:  50%; transform: translate(-50%, -50%); }
+.die .pip.mr { top:   50%; left:  78%; transform: translate(-50%, -50%); }
+.die .pip.bl { top:   78%; left:  22%; transform: translate(-50%, -50%); }
+.die .pip.bc { top:   78%; left:  50%; transform: translate(-50%, -50%); }
+.die .pip.br { top:   78%; left:  78%; transform: translate(-50%, -50%); }
 
-/* COLOR DIE — single big center pip in arbitrary color */
-.die.color .pip {
+/* COLOR DIE — colored tile + white border + white center pip w/ tiny inner dot */
+.die.color {
   background: var(--color, #2980b9);
-  width: 60%; height: 60%;
-  align-self: center;
-  justify-self: center;
-  grid-column: 1 / 4;
-  grid-row: 1 / 4;
-  box-shadow: inset 0 -3px 5px rgba(0,0,0,.18), 0 0 14px var(--color-glow, rgba(41,128,185,.45));
+  border-color: #fff;
+  border-width: 4px;
+}
+.die.color .pip {
+  background: #fff;
+  width: 30%;
+  height: 30%;
+  box-shadow: 0 2px 5px rgba(0,0,0,.20), inset 0 -2px 3px rgba(0,0,0,.10);
+}
+.die.color .pip::after {
+  content: '';
+  position: absolute;
+  inset: 36%;
+  border-radius: 50%;
+  background: var(--color, #2980b9);
 }
 
-/* NUMBER DIE  (d4/d8/d10/d12/d20) — show the number */
+/* NUMERIC DIE (d4/d8/d10/d12/d20) — just show the number */
 .die.numeric {
   font-family: 'Bungee', sans-serif;
-  font-size: 1.9rem;
+  font-size: 2rem;
   color: var(--die-pip);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
 }
 
 /* Animations */
@@ -265,11 +275,11 @@ select { font-family:inherit; }
   100% { transform: rotateY(720deg) scale(1);   }
 }
 @keyframes kf-bounce {
-  0%   { transform: translateY(0)    scale(1);   }
+  0%   { transform: translateY(0)     scale(1);   }
   35%  { transform: translateY(-16px) scale(1.08);}
-  60%  { transform: translateY(0)    scale(.92); }
-  80%  { transform: translateY(-5px) scale(1.03);}
-  100% { transform: translateY(0)    scale(1);   }
+  60%  { transform: translateY(0)     scale(.92); }
+  80%  { transform: translateY(-5px)  scale(1.03);}
+  100% { transform: translateY(0)     scale(1);   }
 }
 @keyframes kf-fadein {
   from { opacity:0; transform: scale(.6); }
@@ -279,7 +289,7 @@ select { font-family:inherit; }
 .die.bouncing { animation: kf-bounce .45s ease-out; }
 
 /* =========================================================
-   ROLL AGAIN BUTTON  (yellow pill)
+   ROLL AGAIN BUTTON (yellow pill)
    ========================================================= */
 .roll-button {
   display: block;
@@ -374,18 +384,11 @@ select { font-family:inherit; }
   height: 34px !important;
   border-width: 2px !important;
   border-radius: 6px !important;
-  padding: 12% !important;
-  gap: 4% !important;
   box-shadow: 0 1px 4px rgba(0,0,0,.15) !important;
 }
-.history-die.color .pip {
-  width: 64%; height: 64%;
-  box-shadow: none;
-}
-.history-die.numeric {
-  font-size: .82rem;
-  padding: 0 !important;
-}
+.history-die .pip { width: 19%; height: 19%; }
+.history-die.color .pip { width: 30%; height: 30%; }
+.history-die.numeric { font-size: .82rem; }
 
 /* =========================================================
    FOOTER
@@ -525,7 +528,6 @@ select { font-family:inherit; }
 .ctrl-btn-action.save { background:rgba(60,120,255,.15); border-color:rgba(60,120,255,.3); color:#88aaff; }
 .ctrl-btn-action.save:hover { background:rgba(60,120,255,.25); }
 
-/* corner hotspot */
 #corner-spot {
   position:fixed; bottom:0; left:0;
   width:50px; height:50px; z-index:9990;
