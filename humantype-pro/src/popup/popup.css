@@ -635,6 +635,15 @@ input[type='range']::-moz-range-thumb {
   color: var(--muted);
 }
 
+/* ============================== Credit ================================= */
+.credit {
+  text-align: center;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  padding-top: 2px;
+}
+
 /* ============================== Toast ================================== */
 .toast {
   position: fixed;
