@@ -208,6 +208,10 @@ body {
   gap: 14px;
   animation: fade-in 0.3s var(--ease);
 }
+/* The hidden attribute must win over display:flex above. */
+.tab-panel[hidden] {
+  display: none;
+}
 
 /* ============================== Rewrite =============================== */
 .field-label {
