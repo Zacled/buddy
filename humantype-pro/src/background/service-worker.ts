@@ -99,7 +99,7 @@ chrome.commands?.onCommand.addListener(async (command) => {
     command === 'stop-typing'
       ? { type: 'STOP_TYPING' }
       : command === 'toggle-pause'
-        ? { type: 'PAUSE_TYPING' } // content script no-ops if not typing
+        ? { type: 'TOGGLE_PAUSE' } // pauses if typing, resumes if paused
         : null;
 
   if (message) {

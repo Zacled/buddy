@@ -74,6 +74,12 @@ async function handleCommand(msg: CommandMessage): Promise<CommandResponse> {
       engine?.resumeTyping();
       return { ok: true };
 
+    case 'TOGGLE_PAUSE':
+      // One shortcut for both: pause if typing, resume if paused.
+      if (engine?.getState() === 'paused') engine.resumeTyping();
+      else engine?.pauseTyping();
+      return { ok: true };
+
     case 'DETECT_EDITOR':
       return { ok: true, editor: describeDetection() };
 

@@ -15,6 +15,7 @@ export type CommandMessage =
   | { type: 'STOP_TYPING' }
   | { type: 'PAUSE_TYPING' }
   | { type: 'RESUME_TYPING' }
+  | { type: 'TOGGLE_PAUSE' }
   | { type: 'TEST_TYPING'; settings: TypingSettings }
   | { type: 'DETECT_EDITOR' }
   | { type: 'GET_STATUS' };
