@@ -39,25 +39,25 @@ const secs = (v: number) => `${(v / 1000).toFixed(2)} s`;
 
 /** The nine core "typing dynamics" sliders, in display order. */
 const CORE_SLIDERS: SliderConfig[] = [
-  { key: 'wpm', label: 'Typing speed', format: (v) => `${v} WPM` },
-  { key: 'speedVariance', label: 'Speed variance', format: pct },
-  { key: 'breakFrequency', label: 'Break frequency', format: pct },
-  { key: 'breakVariance', label: 'Break variance', format: pct },
-  { key: 'minBreakMs', label: 'Min break length', format: secs },
-  { key: 'maxBreakMs', label: 'Max break length', format: secs },
-  { key: 'typoRate', label: 'Typo rate', format: pct1 },
-  { key: 'falseStartRate', label: 'False-start rate', format: pct1 },
-  { key: 'correctionDelayMs', label: 'Correction delay', format: (v) => `${v} ms` },
+  { key: 'wpm', label: 'Typing speed (how fast it types)', format: (v) => `${v} WPM` },
+  { key: 'speedVariance', label: 'Speed variance (how much typing speed changes)', format: pct },
+  { key: 'breakFrequency', label: 'Break frequency (how often pauses happen)', format: pct },
+  { key: 'breakVariance', label: 'Break variance (how random the pauses are)', format: pct },
+  { key: 'minBreakMs', label: 'Min break length (shortest pause)', format: secs },
+  { key: 'maxBreakMs', label: 'Max break length (longest pause)', format: secs },
+  { key: 'typoRate', label: 'Typo rate (how often mistakes are made)', format: pct1 },
+  { key: 'falseStartRate', label: 'False-start rate (starts typing then corrects itself)', format: pct1 },
+  { key: 'correctionDelayMs', label: 'Correction delay (time before fixing mistakes)', format: (v) => `${v} ms` },
 ];
 
 const LONGWORD_SLIDERS: SliderConfig[] = [
-  { key: 'longWordThreshold', label: 'Long-word length', format: (v) => `${v} chars` },
+  { key: 'longWordThreshold', label: 'Long-word length (word length considered "long")', format: (v) => `${v} chars` },
 ];
 const FATIGUE_SLIDERS: SliderConfig[] = [
-  { key: 'fatigueStrength', label: 'Fatigue strength', format: pct },
+  { key: 'fatigueStrength', label: 'Fatigue strength (how much it slows down)', format: pct },
 ];
 const BURST_SLIDERS: SliderConfig[] = [
-  { key: 'burstChance', label: 'Burst chance', format: pct },
+  { key: 'burstChance', label: 'Burst chance (chance of a speed burst)', format: pct },
 ];
 
 // ---------------------------------------------------------------------------
