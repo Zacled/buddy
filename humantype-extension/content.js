@@ -213,6 +213,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
     stopFlag     = false;
     typingActive = true;
+    sendResponse({ ok: true });
 
     typeText(msg.config).then(result => {
       typingActive = false;
