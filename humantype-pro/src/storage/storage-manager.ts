@@ -15,6 +15,7 @@ const KEYS = {
   settings: 'ht_settings',
   presets: 'ht_user_presets',
   lastText: 'ht_last_text',
+  rewriteDraft: 'ht_rewrite_draft',
 } as const;
 
 /** Read settings, transparently filling any missing keys with defaults. */
@@ -84,6 +85,26 @@ export async function getLastText(): Promise<string> {
 
 export async function setLastText(text: string): Promise<void> {
   await chrome.storage.local.set({ [KEYS.lastText]: text });
+}
+
+/** A saved Rewrite-tab draft so the user's work survives a popup reopen. */
+export interface RewriteDraft {
+  original: string;
+  rewritten: string;
+  style: string;
+}
+
+export async function getRewriteDraft(): Promise<RewriteDraft> {
+  const stored = await chrome.storage.local.get(KEYS.rewriteDraft);
+  return (stored[KEYS.rewriteDraft] ?? {
+    original: '',
+    rewritten: '',
+    style: 'professional',
+  }) as RewriteDraft;
+}
+
+export async function setRewriteDraft(draft: RewriteDraft): Promise<void> {
+  await chrome.storage.local.set({ [KEYS.rewriteDraft]: draft });
 }
 
 /** Subscribe to settings changes from other contexts. Returns an unsubscribe fn. */

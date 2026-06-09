@@ -9,15 +9,19 @@
 
 import { SETTING_BOUNDS } from '../shared/defaults';
 import { estimateDurationMs } from '../engine/human-typing-engine';
+import { rewrite } from '../rewrite/rewrite-engine';
+import type { RewriteStyle } from '../rewrite/rewrite-engine';
 import { formatDuration } from '../utils/timing';
 import {
   getAllPresets,
   getLastText,
+  getRewriteDraft,
   getSettings,
   resetSettings,
   savePreset,
   saveSettings,
   setLastText,
+  setRewriteDraft,
 } from '../storage/storage-manager';
 import type { CommandMessage, CommandResponse } from '../shared/messages';
 import type { EngineState, Preset, TypingProgress, TypingSettings } from '../shared/types';
@@ -96,6 +100,16 @@ const el = {
   btnSave: $<HTMLButtonElement>('btn-save'),
   btnReset: $<HTMLButtonElement>('btn-reset'),
   toast: $('toast'),
+  // Tabs + Rewrite panel
+  tabs: Array.from(document.querySelectorAll<HTMLButtonElement>('.tab')),
+  panels: Array.from(document.querySelectorAll<HTMLElement>('.tab-panel')),
+  rewriteInput: $<HTMLTextAreaElement>('rewrite-input'),
+  rewriteOutput: $<HTMLTextAreaElement>('rewrite-output'),
+  rewriteStyle: $<HTMLSelectElement>('rewrite-style'),
+  rewriteInCount: $('rewrite-in-count'),
+  rewriteOutCount: $('rewrite-out-count'),
+  btnRewrite: $<HTMLButtonElement>('btn-rewrite'),
+  btnRewriteCopy: $<HTMLButtonElement>('btn-rewrite-copy'),
 };
 
 // ---------------------------------------------------------------------------
@@ -392,6 +406,65 @@ async function onReset(): Promise<void> {
 }
 
 // ===========================================================================
+// Tabs
+// ===========================================================================
+function activateTab(panelId: string): void {
+  for (const tab of el.tabs) {
+    tab.classList.toggle('tab--active', tab.dataset.panel === panelId);
+  }
+  for (const panel of el.panels) {
+    panel.hidden = panel.id !== panelId;
+  }
+}
+
+// ===========================================================================
+// Rewrite
+// ===========================================================================
+let rewriteSaveTimer: number | undefined;
+
+function persistRewriteDraft(): void {
+  clearTimeout(rewriteSaveTimer);
+  rewriteSaveTimer = window.setTimeout(() => {
+    void setRewriteDraft({
+      original: el.rewriteInput.value,
+      rewritten: el.rewriteOutput.value,
+      style: el.rewriteStyle.value,
+    });
+  }, 250);
+}
+
+function onRewrite(): void {
+  const original = el.rewriteInput.value;
+  if (!original.trim()) {
+    toast('Paste some text to rewrite first.', 'error');
+    return;
+  }
+  const style = el.rewriteStyle.value as RewriteStyle;
+  const result = rewrite(original, style);
+  el.rewriteOutput.value = result;
+  el.rewriteOutCount.textContent = String(result.length);
+  persistRewriteDraft();
+  toast('Rewritten — meaning preserved.', 'success');
+}
+
+async function onRewriteCopy(): Promise<void> {
+  const text = el.rewriteOutput.value;
+  if (!text) {
+    toast('Nothing to copy yet.', 'error');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Copied to clipboard.', 'success');
+  } catch {
+    // Fallback for restricted clipboard access.
+    el.rewriteOutput.select();
+    document.execCommand('copy');
+    toast('Copied to clipboard.', 'success');
+  }
+}
+
+// ===========================================================================
 // Toast
 // ===========================================================================
 let toastTimer: number | undefined;
@@ -443,6 +516,20 @@ function attachEvents(): void {
   el.btnSave.addEventListener('click', () => void onSavePreset());
   el.btnReset.addEventListener('click', () => void onReset());
 
+  // Tabs
+  for (const tab of el.tabs) {
+    tab.addEventListener('click', () => activateTab(tab.dataset.panel!));
+  }
+
+  // Rewrite panel
+  el.rewriteInput.addEventListener('input', () => {
+    el.rewriteInCount.textContent = String(el.rewriteInput.value.length);
+    persistRewriteDraft();
+  });
+  el.rewriteStyle.addEventListener('change', () => persistRewriteDraft());
+  el.btnRewrite.addEventListener('click', () => onRewrite());
+  el.btnRewriteCopy.addEventListener('click', () => void onRewriteCopy());
+
   // Progress events broadcast by the content script.
   chrome.runtime.onMessage.addListener((message) => {
     if (message && message.type === 'PROGRESS') {
@@ -462,6 +549,14 @@ async function init(): Promise<void> {
 
   el.textInput.value = await getLastText();
   refreshEstimate();
+
+  // Restore the Rewrite-tab draft.
+  const draft = await getRewriteDraft();
+  el.rewriteInput.value = draft.original;
+  el.rewriteOutput.value = draft.rewritten;
+  el.rewriteStyle.value = draft.style;
+  el.rewriteInCount.textContent = String(draft.original.length);
+  el.rewriteOutCount.textContent = String(draft.rewritten.length);
 
   await refreshPresets();
   attachEvents();

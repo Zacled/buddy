@@ -23,6 +23,19 @@
         </div>
       </header>
 
+      <!-- ============================ Tabs ============================= -->
+      <nav class="tabs" role="tablist">
+        <button class="tab tab--active" id="tab-typing" data-panel="panel-typing" role="tab">
+          Typing
+        </button>
+        <button class="tab" id="tab-rewrite" data-panel="panel-rewrite" role="tab">
+          Rewrite
+        </button>
+      </nav>
+
+      <!-- ===================== Panel: Typing ====================== -->
+      <div id="panel-typing" class="tab-panel">
+
       <!-- Detected editor -->
       <div class="editor-chip" id="editor-chip" title="The editor detected on the active tab">
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
@@ -142,6 +155,61 @@
       <footer class="footer">
         <span>Shortcuts: <kbd>Ctrl/⌘ Shift Space</kbd> pause · <kbd>Ctrl/⌘ Shift ⌫</kbd> stop</span>
       </footer>
+      </div>
+      <!-- ===================== /Panel: Typing ===================== -->
+
+      <!-- ===================== Panel: Rewrite ===================== -->
+      <div id="panel-rewrite" class="tab-panel" hidden>
+        <!-- Original text -->
+        <section class="block">
+          <label class="field-label" for="rewrite-input">Original Text</label>
+          <textarea
+            id="rewrite-input"
+            class="text-input text-input--tall"
+            spellcheck="false"
+            placeholder="Paste an essay, paragraph, or any writing you'd like to improve…"
+          ></textarea>
+          <div class="meta">
+            <span class="meta__item"><strong id="rewrite-in-count">0</strong> chars</span>
+          </div>
+        </section>
+
+        <!-- Style picker + Rewrite button (sits between the two boxes) -->
+        <section class="rewrite-actions">
+          <select id="rewrite-style" class="select" aria-label="Rewrite style">
+            <option value="professional">Professional</option>
+            <option value="formal">Formal</option>
+            <option value="academic">Academic</option>
+            <option value="casual">Casual</option>
+            <option value="concise">Concise</option>
+          </select>
+          <button class="btn btn--primary" id="btn-rewrite">
+            <span class="btn__icon">↻</span> Rewrite
+          </button>
+        </section>
+
+        <!-- Rewritten version -->
+        <section class="block">
+          <label class="field-label" for="rewrite-output">Rewritten Version</label>
+          <textarea
+            id="rewrite-output"
+            class="text-input text-input--tall"
+            spellcheck="false"
+            readonly
+            placeholder="Your improved version will appear here."
+          ></textarea>
+          <div class="rewrite-output-foot">
+            <span class="meta__item"><strong id="rewrite-out-count">0</strong> chars</span>
+            <button class="btn btn--mini btn--gold" id="btn-rewrite-copy">Copy</button>
+          </div>
+        </section>
+
+        <p class="rewrite-note">
+          Improves clarity, grammar, repetition and tone while keeping your
+          original meaning. Runs locally — no AI, no data leaves your browser.
+        </p>
+      </div>
+      <!-- ===================== /Panel: Rewrite ==================== -->
     </div>
 
     <!-- Toast container for notifications -->
