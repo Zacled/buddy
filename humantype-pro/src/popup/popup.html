@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HumanType Pro</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- ============================ Header ============================ -->
+      <header class="header">
+        <div class="brand">
+          <div class="brand__mark" aria-hidden="true">H</div>
+          <div class="brand__text">
+            <h1 class="brand__title">HumanType <span>Pro</span></h1>
+            <p class="brand__tag">Realistic human typing simulation</p>
+          </div>
+        </div>
+        <div class="status" id="status">
+          <span class="status__dot" id="status-dot"></span>
+          <span class="status__label" id="status-label">Idle</span>
+        </div>
+      </header>
+
+      <!-- Detected editor -->
+      <div class="editor-chip" id="editor-chip" title="The editor detected on the active tab">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+          <path fill="currentColor" d="M3 5h18v2H3zm0 6h18v2H3zm0 6h12v2H3z" />
+        </svg>
+        <span id="editor-label">Detecting editor…</span>
+      </div>
+
+      <!-- ============================ Text input ======================= -->
+      <section class="block">
+        <textarea
+          id="text-input"
+          class="text-input"
+          spellcheck="false"
+          placeholder="Paste or type the text you want HumanType Pro to type for you…"
+        ></textarea>
+        <div class="meta">
+          <span class="meta__item"><strong id="char-count">0</strong> chars</span>
+          <span class="meta__item">≈ <strong id="eta">—</strong> to type</span>
+        </div>
+      </section>
+
+      <!-- ============================ Progress ========================= -->
+      <div class="progress" aria-hidden="true">
+        <div class="progress__fill" id="progress-fill"></div>
+      </div>
+
+      <!-- ============================ Controls ========================= -->
+      <section class="controls">
+        <button class="btn btn--primary" id="btn-start">
+          <span class="btn__icon">▶</span> Start
+        </button>
+        <button class="btn btn--ghost" id="btn-pause" disabled>
+          <span class="btn__icon">II</span> Pause
+        </button>
+        <button class="btn btn--danger" id="btn-stop" disabled>
+          <span class="btn__icon">■</span> Stop
+        </button>
+        <button class="btn btn--outline" id="btn-test">
+          <span class="btn__icon">✦</span> Test
+        </button>
+      </section>
+
+      <!-- ============================ Presets ========================== -->
+      <section class="block presets">
+        <div class="presets__row">
+          <select id="preset-select" class="select" aria-label="Presets"></select>
+          <button class="btn btn--mini" id="btn-load">Load</button>
+          <button class="btn btn--mini btn--danger-ghost" id="btn-reset">Reset</button>
+        </div>
+        <div class="presets__row">
+          <input
+            id="preset-name"
+            class="input"
+            type="text"
+            placeholder="Name a new preset…"
+            maxlength="40"
+          />
+          <button class="btn btn--mini btn--gold" id="btn-save">Save</button>
+        </div>
+      </section>
+
+      <!-- ============================ Core sliders ===================== -->
+      <section class="block">
+        <h2 class="section-title">Typing dynamics</h2>
+        <div id="core-sliders" class="sliders"></div>
+      </section>
+
+      <!-- ============================ Advanced ========================= -->
+      <section class="block">
+        <button class="section-toggle" id="advanced-toggle" aria-expanded="false">
+          <span>Advanced behaviour</span>
+          <span class="section-toggle__chevron">▾</span>
+        </button>
+        <div class="advanced" id="advanced-panel" hidden>
+          <!-- Toggle: hesitate before long words -->
+          <div class="switch-row">
+            <label class="switch">
+              <input type="checkbox" id="toggle-longwords" />
+              <span class="switch__track"><span class="switch__thumb"></span></span>
+            </label>
+            <span class="switch-row__label">Hesitate before long words</span>
+          </div>
+          <div class="sliders" id="longword-sliders"></div>
+
+          <!-- Toggle: hesitate before punctuation -->
+          <div class="switch-row">
+            <label class="switch">
+              <input type="checkbox" id="toggle-punctuation" />
+              <span class="switch__track"><span class="switch__thumb"></span></span>
+            </label>
+            <span class="switch-row__label">Hesitate before punctuation</span>
+          </div>
+
+          <!-- Toggle: fatigue -->
+          <div class="switch-row">
+            <label class="switch">
+              <input type="checkbox" id="toggle-fatigue" />
+              <span class="switch__track"><span class="switch__thumb"></span></span>
+            </label>
+            <span class="switch-row__label">Fatigue (slow down over time)</span>
+          </div>
+          <div class="sliders" id="fatigue-sliders"></div>
+
+          <!-- Toggle: burst mode -->
+          <div class="switch-row">
+            <label class="switch">
+              <input type="checkbox" id="toggle-burst" />
+              <span class="switch__track"><span class="switch__thumb"></span></span>
+            </label>
+            <span class="switch-row__label">Burst typing mode</span>
+          </div>
+          <div class="sliders" id="burst-sliders"></div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>Shortcuts: <kbd>Ctrl/⌘ Shift Space</kbd> pause · <kbd>Ctrl/⌘ Shift ⌫</kbd> stop</span>
+      </footer>
+    </div>
+
+    <!-- Toast container for notifications -->
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

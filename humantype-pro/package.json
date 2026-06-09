@@ -1,0 +1,20 @@
+{
+  "name": "humantype-pro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HumanType Pro — a Manifest V3 Chrome extension that types text the way a real person would.",
+  "type": "module",
+  "scripts": {
+    "icons": "node scripts/generate-icons.mjs",
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "dist": "npm run icons && npm run build"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "esbuild": "^0.21.5",
+    "typescript": "^5.4.5"
+  }
+}
