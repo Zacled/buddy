@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HumanType</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f0f;
+      color: #e8e8e8;
+      width: 360px;
+      padding: 16px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .header .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 6px #4ade80;
+    }
+
+    .header .dot.typing {
+      background: #facc15;
+      box-shadow: 0 0 6px #facc15;
+      animation: pulse 0.8s infinite;
+    }
+
+    .header .dot.stopped {
+      background: #f87171;
+      box-shadow: 0 0 6px #f87171;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #e8e8e8;
+      font-size: 13px;
+      padding: 10px 12px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+      line-height: 1.5;
+    }
+
+    textarea:focus {
+      border-color: #4a4a4a;
+    }
+
+    textarea::placeholder {
+      color: #555;
+    }
+
+    .sliders {
+      margin: 14px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .slider-label span.name { font-weight: 500; color: #ccc; }
+    .slider-label span.val { font-weight: 600; color: #e8e8e8; font-size: 13px; }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      background: #2a2a2a;
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #e8e8e8;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .divider {
+      height: 1px;
+      background: #1e1e1e;
+      margin: 4px 0;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    button:active { transform: scale(0.97); }
+
+    #startBtn {
+      background: #e8e8e8;
+      color: #0f0f0f;
+    }
+
+    #startBtn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    #stopBtn {
+      background: #1e1e1e;
+      color: #f87171;
+      border: 1px solid #2e2e2e;
+      display: none;
+    }
+
+    #stopBtn.visible { display: block; }
+
+    .status {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #666;
+      min-height: 16px;
+      text-align: center;
+    }
+
+    .status.active { color: #4ade80; }
+    .status.error { color: #f87171; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="dot" id="statusDot"></div>
+    <h1>HumanType</h1>
+  </div>
+
+  <textarea id="inputText" placeholder="Paste your text here…"></textarea>
+
+  <div class="sliders">
+    <div class="slider-row">
+      <div class="slider-label">
+        <span class="name">Words per minute</span>
+        <span class="val" id="wpmVal">60 WPM</span>
+      </div>
+      <input type="range" id="wpm" min="20" max="200" value="60" step="5" />
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="slider-row">
+      <div class="slider-label">
+        <span class="name">Typo rate</span>
+        <span class="val" id="typoVal">8%</span>
+      </div>
+      <input type="range" id="typo" min="0" max="40" value="8" step="1" />
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-label">
+        <span class="name">Typo fix chance</span>
+        <span class="val" id="fixVal">70%</span>
+      </div>
+      <input type="range" id="fix" min="0" max="100" value="70" step="5" />
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="slider-row">
+      <div class="slider-label">
+        <span class="name">Pause frequency</span>
+        <span class="val" id="pauseFreqVal">5%</span>
+      </div>
+      <input type="range" id="pauseFreq" min="0" max="30" value="5" step="1" />
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-label">
+        <span class="name">Max pause length</span>
+        <span class="val" id="pauseLenVal">2.0s</span>
+      </div>
+      <input type="range" id="pauseLen" min="0.5" max="10" value="2" step="0.5" />
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="slider-row">
+      <div class="slider-label">
+        <span class="name">Rhythm variance</span>
+        <span class="val" id="varianceVal">Medium</span>
+      </div>
+      <input type="range" id="variance" min="1" max="3" value="2" step="1" />
+    </div>
+  </div>
+
+  <div class="buttons">
+    <button id="startBtn">Start Typing</button>
+    <button id="stopBtn">Stop</button>
+  </div>
+
+  <div class="status" id="statusMsg">Click on an input field on the page first, then press Start.</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
