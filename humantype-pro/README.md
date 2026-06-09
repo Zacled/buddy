@@ -38,7 +38,6 @@ back-spaced away, false starts, fatigue and the occasional fast burst.
 
 ```
 humantype-pro/
-├── manifest.json              # MV3 manifest (paths are relative to dist/)
 ├── package.json               # scripts + dev dependencies
 ├── tsconfig.json              # strict TypeScript config (type-check only)
 ├── build.mjs                  # esbuild bundler → dist/
@@ -46,6 +45,7 @@ humantype-pro/
 │   └── generate-icons.mjs     # dependency-free PNG icon generator
 ├── icons/                     # icon16/48/128.png (generated)
 └── src/
+    ├── manifest.json          # MV3 manifest (copied to dist/ by the build)
     ├── shared/                # types, message contracts, defaults & presets
     │   ├── types.ts
     │   ├── messages.ts
@@ -115,6 +115,10 @@ Handy shortcuts:
 ---
 
 ## 🚀 Installation (load unpacked)
+
+> ⚠️ **Load the `dist/` folder, not the project root.** Chrome needs the
+> *built* extension — selecting `humantype-pro/` itself will fail with
+> "Could not load javascript 'content-script.js'".
 
 1. Run the build steps above so `humantype-pro/dist/` exists.
 2. Open `chrome://extensions` in Chrome (or any Chromium browser).

@@ -26,7 +26,7 @@ const entryPoints = {
 /** Copy everything Chrome loads as-is into dist/. */
 async function copyStatic() {
   await mkdir(OUT, { recursive: true });
-  await cp('manifest.json', `${OUT}/manifest.json`);
+  await cp('src/manifest.json', `${OUT}/manifest.json`);
   await cp('src/popup/popup.html', `${OUT}/popup.html`);
   await cp('src/popup/popup.css', `${OUT}/popup.css`);
   await cp('icons', `${OUT}/icons`, { recursive: true });
