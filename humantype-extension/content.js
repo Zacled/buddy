@@ -10,130 +10,127 @@ const NEIGHBORS = {
   z:['a','s','x'], ' ':['c','v','b','n','m'],
 };
 
-let stopFlag    = false;
-let typingActive = false;
+// ── Detect which frame context we're in ──────────────────────────────────────
+//
+// Google Docs injects a tiny iframe whose only job is to capture keystrokes.
+// It contains a single <textarea>. We detect that here so this content script
+// instance (running inside the iframe) owns all the typing for Google Docs.
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+const isInIframe = window.self !== window.top;
+
+function isGDocsKeyIframe() {
+  if (!isInIframe) return false;
+  return document.querySelectorAll('textarea').length === 1;
 }
 
+const IN_GDOCS_IFRAME = isGDocsKeyIframe();
+
+// ── Shared state ─────────────────────────────────────────────────────────────
+
+let stopFlag     = false;
+let typingActive = false;
+
+// Main frame tracks the last standard input the user focused
+let lastFocusedEl = null;
+
+if (!isInIframe) {
+  document.addEventListener('focusin', (e) => {
+    const tag = e.target.tagName.toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) {
+      lastFocusedEl = e.target;
+    }
+  }, true);
+}
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 function jitter(base, variance) {
-  const spread = variance * 0.35;
-  const factor = 1 + (Math.random() * 2 - 1) * spread;
+  const factor = 1 + (Math.random() * 2 - 1) * variance * 0.35;
   return Math.max(20, Math.round(base * factor));
 }
 
 function getNeighbor(ch) {
-  const lower = ch.toLowerCase();
-  const neighbors = NEIGHBORS[lower];
+  const neighbors = NEIGHBORS[ch.toLowerCase()];
   if (!neighbors) return null;
-  const typo = neighbors[Math.floor(Math.random() * neighbors.length)];
-  return ch === ch.toUpperCase() ? typo.toUpperCase() : typo;
+  const t = neighbors[Math.floor(Math.random() * neighbors.length)];
+  return ch === ch.toUpperCase() ? t.toUpperCase() : t;
 }
 
-// ── Target detection ────────────────────────────────────────────────────────
+// ── Google Docs iframe typing ────────────────────────────────────────────────
 
-const TARGET = { STANDARD: 'standard', EXEC: 'exec' };
-
-function detectTarget() {
-  const active = document.activeElement;
-  if (!active) return null;
-
-  const tag = active.tagName.toLowerCase();
-
-  // Normal input or textarea
-  if (tag === 'input' || tag === 'textarea') return { type: TARGET.STANDARD, el: active };
-
-  // Standard contenteditable (e.g. Notion, Slack, most editors)
-  if (active.isContentEditable) return { type: TARGET.STANDARD, el: active };
-
-  // Google Docs / Slides / canvas-based editors:
-  // The active element is usually <body> or a non-editable div, but
-  // execCommand('insertText') still works because the editor traps keyboard
-  // events at the document level.
-  if (document.queryCommandSupported && document.queryCommandSupported('insertText')) {
-    return { type: TARGET.EXEC, el: active };
-  }
-
-  return null;
+function gdocsInsert(ta, char) {
+  const code = char.charCodeAt(0);
+  ta.dispatchEvent(new KeyboardEvent('keydown',  { key: char, keyCode: code, which: code, charCode: 0,    bubbles: true, cancelable: true }));
+  ta.dispatchEvent(new KeyboardEvent('keypress', { key: char, keyCode: code, which: code, charCode: code, bubbles: true, cancelable: true }));
+  ta.dispatchEvent(new KeyboardEvent('keyup',    { key: char, keyCode: code, which: code, charCode: 0,    bubbles: true, cancelable: true }));
 }
 
-// ── Low-level insert / delete ────────────────────────────────────────────────
-
-function dispatchKey(el, eventType, key, code) {
-  el.dispatchEvent(new KeyboardEvent(eventType, {
-    key,
-    code: code || `Key${key.toUpperCase()}`,
-    bubbles: true, cancelable: true, composed: true,
-  }));
+function gdocsBackspace(ta) {
+  ta.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', keyCode: 8, which: 8, bubbles: true, cancelable: true }));
+  ta.dispatchEvent(new KeyboardEvent('keyup',   { key: 'Backspace', keyCode: 8, which: 8, bubbles: true, cancelable: true }));
 }
 
-function insertChar(target, char) {
-  if (target.type === TARGET.EXEC) {
-    // Works in Google Docs, Google Slides, etc.
+// ── Standard input typing ────────────────────────────────────────────────────
+
+function standardInsert(el, char) {
+  if (el.isContentEditable) {
     document.execCommand('insertText', false, char);
-    return;
-  }
-
-  const el = target.el;
-  if (el.isContentEditable) {
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      const range = sel.getRangeAt(0);
-      range.deleteContents();
-      range.insertNode(document.createTextNode(char));
-      range.collapse(false);
-      sel.removeAllRanges();
-      sel.addRange(range);
-    } else {
-      el.textContent += char;
-    }
-    el.dispatchEvent(new InputEvent('input', { bubbles: true, data: char, inputType: 'insertText' }));
   } else {
-    const start = el.selectionStart;
-    const val   = el.value;
-    el.value    = val.slice(0, start) + char + val.slice(el.selectionEnd);
-    el.selectionStart = el.selectionEnd = start + 1;
+    const s = el.selectionStart;
+    el.value = el.value.slice(0, s) + char + el.value.slice(el.selectionEnd);
+    el.selectionStart = el.selectionEnd = s + 1;
     el.dispatchEvent(new InputEvent('input', { bubbles: true, data: char, inputType: 'insertText' }));
   }
 }
 
-function deleteChar(target) {
-  if (target.type === TARGET.EXEC) {
-    document.execCommand('delete', false);
-    return;
-  }
-
-  const el = target.el;
+function standardDelete(el) {
   if (el.isContentEditable) {
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      const range = sel.getRangeAt(0);
-      if (range.startOffset > 0) {
-        range.setStart(range.startContainer, range.startOffset - 1);
-        range.deleteContents();
-      }
-    }
-    el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward' }));
+    document.execCommand('delete', false);
   } else {
-    const start = el.selectionStart;
-    if (start > 0) {
-      const val = el.value;
-      el.value  = val.slice(0, start - 1) + val.slice(start);
-      el.selectionStart = el.selectionEnd = start - 1;
+    const s = el.selectionStart;
+    if (s > 0) {
+      el.value = el.value.slice(0, s - 1) + el.value.slice(s);
+      el.selectionStart = el.selectionEnd = s - 1;
+      el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward' }));
     }
-    el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward' }));
   }
 }
 
 // ── Main typing loop ─────────────────────────────────────────────────────────
 
-async function typeText(target, config) {
+async function typeText(config) {
   const { wpm, typoRate, fixRate, pauseFreq, pauseLen, variance, text } = config;
   const baseDelay = 60000 / (wpm * 5);
 
-  if (target.el && target.el.focus) target.el.focus();
+  let ta = null;
+  let el = null;
+
+  if (IN_GDOCS_IFRAME) {
+    ta = document.querySelector('textarea');
+    if (!ta) return { stopped: false, chars: 0, error: 'No Google Docs textarea found.' };
+    ta.focus();
+  } else {
+    el = lastFocusedEl || document.activeElement;
+    const tag = el && el.tagName.toLowerCase();
+    if (!el || (tag !== 'input' && tag !== 'textarea' && !el.isContentEditable)) {
+      return { stopped: false, chars: 0, error: 'No input focused.' };
+    }
+    el.focus();
+  }
+
   let charsTyped = 0;
+
+  function doInsert(char) {
+    if (IN_GDOCS_IFRAME) gdocsInsert(ta, char);
+    else standardInsert(el, char);
+  }
+
+  function doDelete() {
+    if (IN_GDOCS_IFRAME) gdocsBackspace(ta);
+    else standardDelete(el);
+  }
 
   for (let i = 0; i < text.length; i++) {
     if (stopFlag) return { stopped: true, chars: charsTyped };
@@ -149,20 +146,14 @@ async function typeText(target, config) {
 
     if (makeTypo) {
       const wrongChar = getNeighbor(char) || char;
-      dispatchKey(target.el, 'keydown', wrongChar);
-      insertChar(target, wrongChar);
-      dispatchKey(target.el, 'keyup', wrongChar);
+      doInsert(wrongChar);
       charsTyped++;
 
       await sleep(jitter(baseDelay * 1.5, variance));
       if (stopFlag) return { stopped: true, chars: charsTyped };
 
-      // Occasionally type one more char before noticing
       if (Math.random() < 0.4 && i + 1 < text.length) {
-        const nextChar = text[i + 1];
-        dispatchKey(target.el, 'keydown', nextChar);
-        insertChar(target, nextChar);
-        dispatchKey(target.el, 'keyup', nextChar);
+        doInsert(text[i + 1]);
         charsTyped++;
         i++;
         await sleep(jitter(baseDelay, variance));
@@ -173,25 +164,19 @@ async function typeText(target, config) {
         await sleep(jitter(baseDelay * 2, variance));
         if (stopFlag) return { stopped: true, chars: charsTyped };
 
-        const backspaces = i > 0 && text[i] !== text[i - 1] ? 2 : 1;
+        const backspaces = text[i] !== char ? 2 : 1;
         for (let b = 0; b < backspaces; b++) {
-          dispatchKey(target.el, 'keydown', 'Backspace', 'Backspace');
-          deleteChar(target);
-          dispatchKey(target.el, 'keyup', 'Backspace', 'Backspace');
+          doDelete();
           await sleep(jitter(baseDelay * 0.8, variance));
           if (stopFlag) return { stopped: true, chars: charsTyped };
         }
 
-        dispatchKey(target.el, 'keydown', char);
-        insertChar(target, char);
-        dispatchKey(target.el, 'keyup', char);
+        doInsert(char);
         charsTyped++;
         await sleep(jitter(baseDelay, variance));
       }
     } else {
-      dispatchKey(target.el, 'keydown', char);
-      insertChar(target, char);
-      dispatchKey(target.el, 'keyup', char);
+      doInsert(char);
       charsTyped++;
       await sleep(jitter(baseDelay, variance));
     }
@@ -210,26 +195,35 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   if (msg.type === 'START_TYPING') {
-    if (typingActive) {
-      sendResponse({ error: 'Already typing.' });
+    const gdocsIframePresent = !isInIframe &&
+      !!document.querySelector('.docs-texteventtarget-iframe');
+
+    if (IN_GDOCS_IFRAME) {
+      // We are inside the Google Docs key-capture iframe — handle it here
+    } else if (gdocsIframePresent) {
+      // Main frame on a Google Docs page: the iframe instance handles it
+      sendResponse({ ok: true });
+      return;
+    } else if (isInIframe) {
+      // Some unrelated iframe — ignore
       return;
     }
 
-    const target = detectTarget();
-    if (!target) {
-      sendResponse({ error: 'No editable area focused. Click inside the document first.' });
-      return;
-    }
+    if (typingActive) { sendResponse({ error: 'Already typing.' }); return; }
 
     stopFlag     = false;
     typingActive = true;
 
-    typeText(target, msg.config).then(result => {
+    typeText(msg.config).then(result => {
       typingActive = false;
-      chrome.runtime.sendMessage({
-        type: result.stopped ? 'TYPING_STOPPED' : 'TYPING_DONE',
-        chars: result.chars,
-      });
+      if (result.error) {
+        chrome.runtime.sendMessage({ type: 'TYPING_ERROR', error: result.error });
+      } else {
+        chrome.runtime.sendMessage({
+          type: result.stopped ? 'TYPING_STOPPED' : 'TYPING_DONE',
+          chars: result.chars,
+        });
+      }
     });
 
     sendResponse({ ok: true });

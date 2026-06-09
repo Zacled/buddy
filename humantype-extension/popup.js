@@ -99,6 +99,9 @@ chrome.runtime.onMessage.addListener((msg) => {
   } else if (msg.type === 'TYPING_STOPPED') {
     resetUI();
     setStatus('Stopped.', '');
+  } else if (msg.type === 'TYPING_ERROR') {
+    resetUI();
+    setStatus(msg.error, 'error');
   }
 });
 
