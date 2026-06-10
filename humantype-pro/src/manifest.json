@@ -35,7 +35,7 @@
     }
   ],
 
-  "permissions": ["storage", "activeTab", "notifications", "clipboardRead", "clipboardWrite"],
+  "permissions": ["storage", "activeTab", "scripting", "notifications", "clipboardRead", "clipboardWrite"],
 
   "host_permissions": ["<all_urls>"]
 }

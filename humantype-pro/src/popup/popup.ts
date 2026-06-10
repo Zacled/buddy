@@ -259,7 +259,26 @@ async function sendToActiveTab(message: CommandMessage): Promise<CommandResponse
   try {
     return (await chrome.tabs.sendMessage(tab.id, message)) as CommandResponse;
   } catch {
-    return null; // no content script on this page (chrome://, web store, …)
+    // The content script isn't in this tab yet — common on tabs that were
+    // already open when the extension was (re)loaded. Inject it and retry once.
+    if (await injectContentScript(tab.id)) {
+      try {
+        return (await chrome.tabs.sendMessage(tab.id, message)) as CommandResponse;
+      } catch {
+        return null;
+      }
+    }
+    return null; // genuinely unsupported page (chrome://, Web Store, …)
+  }
+}
+
+/** Programmatically inject the content script into a tab that's missing it. */
+async function injectContentScript(tabId: number): Promise<boolean> {
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['content-script.js'] });
+    return true;
+  } catch {
+    return false; // restricted page where injection isn't allowed
   }
 }
 

@@ -644,6 +644,10 @@ input[type='range']::-moz-range-thumb {
   border-radius: var(--radius);
   animation: slide-down 0.28s var(--ease);
 }
+/* The hidden attribute must win over display:flex above (keeps it collapsed). */
+.advanced[hidden] {
+  display: none;
+}
 
 /* ---- Toggle switch ------------------------------------------------------ */
 .switch-row {
