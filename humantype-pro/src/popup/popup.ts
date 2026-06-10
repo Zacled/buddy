@@ -411,20 +411,62 @@ async function pasteInto(target: HTMLTextAreaElement): Promise<void> {
 let theme: ThemeSettings;
 let themeSaveTimer: number | undefined;
 
+/**
+ * The original (default) dark palette. The surface/border shades sit a few
+ * steps above the background; we keep their *offset* from the default
+ * background and re-apply it to whatever background the user picks, so changing
+ * the background recolours every panel — not just the padding behind them.
+ */
+const DEFAULT_PALETTE = {
+  bg: '#0e0f13',
+  surface: '#15171c',
+  surface2: '#1b1e25',
+  surface3: '#20242c',
+  border: '#2a2f3a',
+  borderSoft: '#23272f',
+};
+
 /** Push the theme colours onto the CSS custom properties the whole UI uses. */
 function applyTheme(t: ThemeSettings): void {
   const root = document.documentElement.style;
+
+  // Background + derived surfaces/borders (shifted together so the whole UI
+  // tracks the chosen background).
   root.setProperty('--bg', t.background);
+  root.setProperty('--surface', shiftFromBg(t.background, DEFAULT_PALETTE.surface));
+  root.setProperty('--surface-2', shiftFromBg(t.background, DEFAULT_PALETTE.surface2));
+  root.setProperty('--surface-3', shiftFromBg(t.background, DEFAULT_PALETTE.surface3));
+  root.setProperty('--border', shiftFromBg(t.background, DEFAULT_PALETTE.border));
+  root.setProperty('--border-soft', shiftFromBg(t.background, DEFAULT_PALETTE.borderSoft));
   root.setProperty(
     '--bg-grad',
     `radial-gradient(120% 120% at 50% 0%, ${lighten(t.background, 0.08)} 0%, ${t.background} 60%)`,
   );
+
+  // Text.
   root.setProperty('--text', t.text);
+
+  // Accent (gold family).
   root.setProperty('--gold', t.accent);
   root.setProperty('--gold-bright', lighten(t.accent, 0.18));
   const { r, g, b } = hexToRgb(t.accent);
   root.setProperty('--gold-soft', `rgba(${r}, ${g}, ${b}, 0.16)`);
   root.setProperty('--gold-line', `rgba(${r}, ${g}, ${b}, 0.4)`);
+}
+
+/**
+ * Take a default palette colour and re-base it onto the user's background,
+ * preserving the original channel offsets (so at the default background the
+ * result is identical to the original theme).
+ */
+function shiftFromBg(bgHex: string, defaultHex: string): string {
+  const bg = hexToRgb(bgHex);
+  const base = hexToRgb(DEFAULT_PALETTE.bg);
+  const target = hexToRgb(defaultHex);
+  const clampByte = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
+  return `rgb(${clampByte(target.r + (bg.r - base.r))}, ${clampByte(
+    target.g + (bg.g - base.g),
+  )}, ${clampByte(target.b + (bg.b - base.b))})`;
 }
 
 function syncThemeInputs(): void {
