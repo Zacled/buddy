@@ -1,37 +1,36 @@
 # HumanType Pro + UnAIMyText (Chrome extension)
 
-One popup, two tools, switched with tabs:
+One popup, two tabs:
 
 - **Auto Typer** — realistic human typing simulation into the active page
   (Google Docs, Word for the web, Notion, Gmail, plain text fields).
-- **UnAIMyText Rewriter** — an AI text humanizer modelled on
-  [unaimytext.com](https://unaimytext.com/), running fully in your browser.
-  A header link opens the full website when you want the complete toolset.
+- **UnAIMyText Rewriter** — a handoff to the real
+  [unaimytext.com](https://unaimytext.com/): paste your text, click one
+  button, humanize on the site, then send the result straight back into
+  the Auto Typer.
+
+## The rewriter flow
+
+1. Paste your writing into the box and click **Humanize on UnAIMyText** —
+   the site opens in a new tab and the extension drops your text into the
+   site's input box automatically (it's also copied to the clipboard as a
+   fallback).
+2. Humanize it on the website.
+3. Click the floating purple **⚡ Send to Auto Typer** button the extension
+   adds to the site — the humanized text is captured and loaded into the
+   Auto Typer tab, ready to type. If auto-detection can't find the result,
+   select the text on the page and click the button again.
 
 ## Auto Typer tab
 
-- Detects the editor on the active tab and types your pasted text with
-  natural speed, pauses, typos, corrections and breaks.
+- Detects the editor on the active tab and types your text with natural
+  speed, pauses, typos, corrections and breaks.
 - Start / Pause / Stop / Test controls, live progress bar and ETA.
-- Built-in presets (Natural, Careful Writer, Fast Typist, Tired & Distracted)
-  plus save/load of your own.
+- Built-in presets (Natural, Careful Writer, Fast Typist, Tired &
+  Distracted) plus save/load of your own.
 - Typing-dynamics sliders and advanced behaviour: hesitation before long
   words and punctuation, fatigue, burst mode.
 - Keyboard shortcuts: `Ctrl/⌘+Shift+Space` pause/resume, `Ctrl/⌘+Shift+U` stop.
-
-## UnAIMyText Rewriter tab
-
-- **Three levels** — Standard (light fixes), Enhanced (deeper rewrite),
-  Aggressive (remove all tells).
-- **Advanced cleanup toggles** — em-dashes → commas (or remove dashes),
-  straighten smart quotes, strip hidden Unicode (zero-width chars, NBSP),
-  remove persistent whitespace, natural contractions.
-- **Humanizing rewrites** — replaces AI-cliché phrases ("utilize" → "use",
-  "delve into" → "explore"), softens stock transitions, trims hedges,
-  breaks up run-on sentences, fixes spelling/capitalization.
-- **Estimated AI-marker meter** — a before→after guide (heuristic, not a
-  guaranteed detector score).
-- **Send to Typer** — pushes the humanized text straight into the Auto Typer.
 
 ## Install (unpacked)
 
@@ -44,10 +43,10 @@ One popup, two tools, switched with tabs:
 
 | File | Purpose |
 | --- | --- |
-| `manifest.json` | MV3 manifest (popup + content script + service worker) |
+| `manifest.json` | MV3 manifest (popup + content scripts + service worker) |
 | `popup.html` / `popup.css` | Tabbed popup UI (purple theme) |
-| `popup.js` | Tabs, typer controls/presets/sliders, rewriter UI |
-| `humanizer.js` | Text-transform engine (`window.Humanizer`) |
+| `popup.js` | Tabs, typer controls/presets/sliders, UnAIMyText handoff |
 | `content-script.js` | Typing engine injected into pages |
+| `unaimytext-bridge.js` | Runs on unaimytext.com: autofills your text and adds the "Send to Auto Typer" button |
 | `service-worker.js` | Badge progress + notifications + shortcuts |
 | `icons/` | Toolbar icons |

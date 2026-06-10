@@ -1,1 +1,15 @@
 "use strict";(()=>{var a={wpm:55,speedVariance:.35,breakFrequency:.05,breakVariance:.5,minBreakMs:400,maxBreakMs:2500,typoRate:.04,falseStartRate:.02,correctionDelayMs:350,hesitateLongWords:!0,longWordThreshold:9,hesitateBeforePunctuation:!0,fatigueEnabled:!0,fatigueStrength:.3,burstModeEnabled:!0,burstChance:.08},m=[{id:"builtin-natural",name:"Natural",builtIn:!0,updatedAt:0,settings:{...a}},{id:"builtin-careful",name:"Careful Writer",builtIn:!0,updatedAt:0,settings:{...a,wpm:38,speedVariance:.25,breakFrequency:.09,typoRate:.015,falseStartRate:.01,correctionDelayMs:250,fatigueStrength:.2,burstModeEnabled:!1}},{id:"builtin-fast",name:"Fast Typist",builtIn:!0,updatedAt:0,settings:{...a,wpm:95,speedVariance:.45,breakFrequency:.03,typoRate:.06,falseStartRate:.03,correctionDelayMs:180,burstChance:.18}},{id:"builtin-tired",name:"Tired & Distracted",builtIn:!0,updatedAt:0,settings:{...a,wpm:42,speedVariance:.5,breakFrequency:.14,minBreakMs:800,maxBreakMs:6e3,typoRate:.07,falseStartRate:.05,fatigueEnabled:!0,fatigueStrength:.7,burstModeEnabled:!1}}];function n(e){return typeof e=="object"&&e!==null&&typeof e.type=="string"}var o="#7c5cff",c="icons/icon128.png";chrome.runtime.onInstalled.addListener(async()=>{(await chrome.storage.sync.get("ht_settings")).ht_settings||await chrome.storage.sync.set({ht_settings:a}),chrome.action.setBadgeBackgroundColor({color:o})});chrome.runtime.onMessage.addListener((e,t)=>{if(!n(e)||e.type!=="PROGRESS")return;let r=e.progress,s=t.tab?.id;g(r,s)});function g(e,t){let r=(s,p=o)=>{chrome.action.setBadgeBackgroundColor({color:p,...t?{tabId:t}:{}}),chrome.action.setBadgeText({text:s,...t?{tabId:t}:{}})};switch(e.state){case"typing":{let s=Math.round(e.ratio*100);r(`${s}`);break}case"paused":r("II");break;case"finished":r("\u2713","#2e9e5b"),i("Typing complete",`Finished typing ${e.totalChars} characters.`),setTimeout(()=>r(""),4e3);break;case"error":r("!","#c0392b"),i("Typing stopped",e.message??"An error occurred while typing.");break;case"idle":default:r("");break}}function i(e,t){try{chrome.notifications?.create({type:"basic",iconUrl:c,title:e,message:t,priority:1})}catch{}}chrome.commands?.onCommand.addListener(async e=>{let[t]=await chrome.tabs.query({active:!0,currentWindow:!0});if(!t?.id)return;let r=e==="stop-typing"?{type:"STOP_TYPING"}:e==="toggle-pause"?{type:"TOGGLE_PAUSE"}:null;r&&chrome.tabs.sendMessage(t.id,r).catch(()=>{})});})();
+
+// UnAIMyText bridge: confirm when humanized text is captured for the typer.
+chrome.runtime.onMessage.addListener((msg) => {
+  if (!msg || msg.type !== "UAMT_CAPTURED") return;
+  try {
+    chrome.notifications?.create({
+      type: "basic",
+      iconUrl: "icons/icon128.png",
+      title: "Sent to Auto Typer",
+      message: `Captured ${msg.chars} characters from UnAIMyText. Open the extension to start typing.`,
+      priority: 1,
+    });
+  } catch {}
+});

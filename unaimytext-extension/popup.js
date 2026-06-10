@@ -1,7 +1,5 @@
 "use strict";
 (() => {
-  const { humanize, aiMarkerScore, DEFAULT_OPTS } = window.Humanizer;
-
   /* ========================================================================
      Shared helpers
      ===================================================================== */
@@ -461,129 +459,49 @@
   }
 
   /* ========================================================================
-     UnAIMyText Rewriter
+     UnAIMyText handoff
      ===================================================================== */
-  const REWRITE_KEY = "uamt_state";
+  const PENDING_KEY = "uamt_pending_text";
+  const DRAFT_KEY = "uamt_draft";
+  const SITE_URL = "https://unaimytext.com/";
 
   const rw = {
-    modes: Array.from(document.querySelectorAll(".mode")),
-    input: $("input"),
-    output: $("output"),
-    inWords: $("in-words"),
-    inChars: $("in-chars"),
-    outWords: $("out-words"),
-    advancedToggle: $("advanced-toggle"),
-    advancedPanel: $("advanced-panel"),
-    optEmdash: $("opt-emdash"),
-    optRemoveDash: $("opt-removedash"),
-    optQuotes: $("opt-quotes"),
-    optUnicode: $("opt-unicode"),
-    optWhitespace: $("opt-whitespace"),
-    optContractions: $("opt-contractions"),
-    btnHumanize: $("btn-humanize"),
-    btnCopy: $("btn-copy"),
-    btnSendTyper: $("btn-send-typer"),
-    score: $("score"),
-    scoreBefore: $("score-before"),
-    scoreAfter: $("score-after"),
-    scoreFill: $("score-fill"),
+    text: $("rewrite-text"),
+    words: $("rewrite-words"),
+    chars: $("rewrite-chars"),
+    btnOpen: $("btn-open-unaimytext"),
   };
 
-  let rewriteMode = "standard";
-
-  function currentRewriteOptions() {
-    return {
-      mode: rewriteMode,
-      emdashToComma: rw.optEmdash.checked,
-      removeDashes: rw.optRemoveDash.checked,
-      straightenQuotes: rw.optQuotes.checked,
-      removeHiddenUnicode: rw.optUnicode.checked,
-      removeWhitespace: rw.optWhitespace.checked,
-      contractions: rw.optContractions.checked,
-    };
-  }
-
-  let rewriteSaveTimer;
-  function saveRewriteState() {
-    clearTimeout(rewriteSaveTimer);
-    rewriteSaveTimer = setTimeout(() => {
-      chrome.storage.local.set({
-        [REWRITE_KEY]: {
-          mode: rewriteMode,
-          input: rw.input.value,
-          output: rw.output.value,
-          opts: currentRewriteOptions(),
-        },
-      });
-    }, 250);
-  }
-
   function refreshRewriteMeta() {
-    rw.inWords.textContent = String(countWords(rw.input.value));
-    rw.inChars.textContent = String(rw.input.value.length);
+    rw.words.textContent = String(countWords(rw.text.value));
+    rw.chars.textContent = String(rw.text.value.length);
   }
 
-  function setRewriteMode(next) {
-    rewriteMode = next;
-    for (const btn of rw.modes) {
-      const active = btn.dataset.mode === next;
-      btn.classList.toggle("mode--active", active);
-      btn.setAttribute("aria-checked", String(active));
-    }
-    saveRewriteState();
+  let draftTimer;
+  function saveDraft() {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(
+      () => chrome.storage.local.set({ [DRAFT_KEY]: rw.text.value }),
+      250
+    );
   }
 
-  function showScore(before, after) {
-    rw.score.hidden = false;
-    rw.scoreBefore.textContent = `${before}%`;
-    rw.scoreAfter.textContent = `${after}%`;
-    const reduction = before > 0 ? Math.round(((before - after) / before) * 100) : 0;
-    rw.scoreFill.style.width = `${Math.max(0, reduction)}%`;
-  }
-
-  function runHumanize() {
-    const text = rw.input.value;
-    if (!text.trim()) {
-      toast("Paste some text to humanize first.", "error");
-      return;
-    }
-    const before = aiMarkerScore(text);
-    const result = humanize(text, currentRewriteOptions());
-    rw.output.value = result;
-    rw.outWords.textContent = String(countWords(result));
-    showScore(before, aiMarkerScore(result));
-    saveRewriteState();
-    toast("Humanized — runs locally, meaning preserved.", "success");
-  }
-
-  async function copyOutput() {
-    const text = rw.output.value;
+  async function openUnaimytext() {
+    const text = rw.text.value.trim();
     if (!text) {
-      toast("Nothing to copy yet.", "error");
+      toast("Paste some text first.", "error");
       return;
     }
+    // The bridge content script on unaimytext.com picks this up and fills
+    // the site's input box. Clipboard copy is the manual fallback.
+    await chrome.storage.local.set({ [PENDING_KEY]: { text, ts: Date.now() } });
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      rw.output.removeAttribute("readonly");
-      rw.output.select();
-      document.execCommand("copy");
-      rw.output.setAttribute("readonly", "");
+      /* clipboard is best-effort */
     }
-    toast("Copied to clipboard.", "success");
-  }
-
-  function sendToTyper() {
-    const text = rw.output.value;
-    if (!text) {
-      toast("Humanize some text first.", "error");
-      return;
-    }
-    ty.input.value = text;
-    chrome.storage.local.set({ [KEYS.lastText]: text });
-    refreshTyperMeta();
-    setTab("panel-typer");
-    toast("Sent to Auto Typer.", "success");
+    chrome.tabs.create({ url: SITE_URL });
+    window.close();
   }
 
   /* ========================================================================
@@ -623,37 +541,28 @@
       if (msg && msg.type === "PROGRESS") onProgress(msg.progress);
     });
 
-    // --- Rewriter ---
-    for (const btn of rw.modes) {
-      btn.addEventListener("click", () => setRewriteMode(btn.dataset.mode));
-    }
-    rw.input.addEventListener("input", () => {
+    // If the bridge captures text while this popup is open, show it live.
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== "local" || !changes[KEYS.lastText]) return;
+      const next = changes[KEYS.lastText].newValue ?? "";
+      if (ty.input.value !== next) {
+        ty.input.value = next;
+        refreshTyperMeta();
+        setTab("panel-typer");
+        toast("Received text from UnAIMyText.", "success");
+      }
+    });
+
+    // --- UnAIMyText handoff ---
+    rw.text.addEventListener("input", () => {
       refreshRewriteMeta();
-      saveRewriteState();
+      saveDraft();
     });
-    rw.advancedToggle.addEventListener("click", () => {
-      const open = rw.advancedToggle.getAttribute("aria-expanded") === "true";
-      rw.advancedToggle.setAttribute("aria-expanded", String(!open));
-      rw.advancedPanel.hidden = open;
-    });
-    rw.optEmdash.addEventListener("change", () => {
-      if (rw.optEmdash.checked) rw.optRemoveDash.checked = false;
-      saveRewriteState();
-    });
-    rw.optRemoveDash.addEventListener("change", () => {
-      if (rw.optRemoveDash.checked) rw.optEmdash.checked = false;
-      saveRewriteState();
-    });
-    for (const opt of [rw.optQuotes, rw.optUnicode, rw.optWhitespace, rw.optContractions]) {
-      opt.addEventListener("change", saveRewriteState);
-    }
-    rw.btnHumanize.addEventListener("click", runHumanize);
-    rw.btnCopy.addEventListener("click", () => void copyOutput());
-    rw.btnSendTyper.addEventListener("click", sendToTyper);
-    rw.input.addEventListener("keydown", (e) => {
+    rw.btnOpen.addEventListener("click", () => void openUnaimytext());
+    rw.text.addEventListener("keydown", (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
-        runHumanize();
+        void openUnaimytext();
       }
     });
   }
@@ -670,24 +579,11 @@
     settings = await loadSettings();
     syncTyperUi();
 
-    const local = await chrome.storage.local.get([KEYS.lastText, REWRITE_KEY, "active_tab"]);
+    const local = await chrome.storage.local.get([KEYS.lastText, DRAFT_KEY, "active_tab"]);
     ty.input.value = local[KEYS.lastText] ?? "";
     refreshTyperMeta();
 
-    const rewriteState = local[REWRITE_KEY];
-    if (rewriteState) {
-      rw.input.value = rewriteState.input ?? "";
-      rw.output.value = rewriteState.output ?? "";
-      const opts = { ...DEFAULT_OPTS, ...(rewriteState.opts ?? {}) };
-      rw.optEmdash.checked = opts.emdashToComma;
-      rw.optRemoveDash.checked = opts.removeDashes;
-      rw.optQuotes.checked = opts.straightenQuotes;
-      rw.optUnicode.checked = opts.removeHiddenUnicode;
-      rw.optWhitespace.checked = opts.removeWhitespace;
-      rw.optContractions.checked = opts.contractions;
-      setRewriteMode(rewriteState.mode ?? "standard");
-      rw.outWords.textContent = String(countWords(rw.output.value));
-    }
+    rw.text.value = local[DRAFT_KEY] ?? "";
     refreshRewriteMeta();
 
     if (local.active_tab === "panel-rewriter") setTab("panel-rewriter");

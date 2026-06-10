@@ -185,51 +185,6 @@ body {
   letter-spacing: 0.2px;
 }
 
-/* ============================ Mode selector ============================= */
-.modes {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  padding: 5px;
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-sm);
-}
-.mode {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 8px 4px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--muted);
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.2s var(--ease), color 0.2s var(--ease);
-}
-.mode:hover {
-  color: var(--text);
-}
-.mode--active {
-  background: var(--accent-soft);
-  color: var(--accent-bright);
-  box-shadow: inset 0 0 0 1px var(--accent-line);
-}
-.mode__name {
-  font-size: 12.5px;
-  font-weight: 700;
-}
-.mode__desc {
-  font-size: 10px;
-  color: var(--faint);
-}
-.mode--active .mode__desc {
-  color: var(--accent-bright);
-  opacity: 0.8;
-}
-
 /* ============================== Inputs ================================== */
 .text-input {
   width: 100%;
@@ -613,10 +568,6 @@ input[type='range']::-moz-range-thumb {
 .section-toggle:hover {
   border-color: var(--accent-line);
 }
-.section-toggle .gear {
-  color: var(--accent-bright);
-  margin-right: 4px;
-}
 .section-toggle__chevron {
   color: var(--accent-bright);
   transition: transform 0.25s var(--ease);
@@ -685,86 +636,25 @@ input[type='range']::-moz-range-thumb {
   background: var(--accent-bright);
 }
 
-/* ============================ Score meter =============================== */
-.score {
+/* ============================ Handoff steps ============================= */
+.steps {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 11px 12px;
+  padding: 12px 12px 12px 30px;
   background: var(--surface);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
-}
-.score__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   font-size: 11.5px;
-}
-.score__label {
-  color: var(--muted);
-  font-weight: 600;
-}
-.score__values {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-.score__before {
-  color: var(--danger);
-}
-.score__arrow {
-  color: var(--faint);
-}
-.score__after {
-  color: var(--success);
-}
-.score__bar {
-  height: 7px;
-  border-radius: 999px;
-  background: var(--surface-3);
-  overflow: hidden;
-}
-.score__fill {
-  height: 100%;
-  width: 0%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent), var(--success));
-  transition: width 0.4s var(--ease);
-}
-
-/* ============================== Output ================================== */
-.output-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11px;
+  line-height: 1.55;
   color: var(--muted);
 }
-.output-foot strong {
-  color: var(--text);
-  font-weight: 700;
-}
-.output-actions {
-  display: flex;
-  gap: 7px;
-}
-
-/* ============================== Note =================================== */
-.note {
-  font-size: 10.5px;
-  line-height: 1.5;
-  color: var(--faint);
-  text-align: center;
-}
-.note a {
+.steps li::marker {
   color: var(--accent-bright);
-  text-decoration: none;
+  font-weight: 700;
 }
-.note a:hover {
-  text-decoration: underline;
+.steps strong {
+  color: var(--text);
 }
 
 .credit {
