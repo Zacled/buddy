@@ -91,3 +91,25 @@ export interface DetectedEditor {
   /** Whether a usable editor was actually found and focused. */
   ready: boolean;
 }
+
+/** User-customisable popup colours. Stored as 6-digit hex strings. */
+export interface ThemeSettings {
+  /** Page/background colour. */
+  background: string;
+  /** Accent colour (buttons, sliders, highlights). */
+  accent: string;
+  /** Primary text colour. */
+  text: string;
+}
+
+/**
+ * User-editable keyboard shortcuts. Each value is a normalised combo string
+ * such as "Ctrl+Shift+Space" produced by {@link comboFromKeyboardEvent}.
+ */
+export interface KeybindSettings {
+  /** Toggle pause/resume while typing. */
+  pauseResume: string;
+  /** Stop typing. */
+  stop: string;
+}
+

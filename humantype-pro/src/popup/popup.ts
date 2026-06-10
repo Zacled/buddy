@@ -13,18 +13,28 @@ import { rewrite } from '../rewrite/rewrite-engine';
 import type { RewriteStyle } from '../rewrite/rewrite-engine';
 import { formatDuration } from '../utils/timing';
 import {
-  getAllPresets,
+  getKeybinds,
   getLastText,
   getRewriteDraft,
   getSettings,
-  resetSettings,
-  savePreset,
+  getTheme,
+  resetKeybinds,
+  resetTheme,
+  saveKeybinds,
   saveSettings,
+  saveTheme,
   setLastText,
   setRewriteDraft,
 } from '../storage/storage-manager';
+import { comboFromKeyboardEvent, formatCombo } from '../utils/keybind';
 import type { CommandMessage, CommandResponse } from '../shared/messages';
-import type { EngineState, Preset, TypingProgress, TypingSettings } from '../shared/types';
+import type {
+  EngineState,
+  KeybindSettings,
+  ThemeSettings,
+  TypingProgress,
+  TypingSettings,
+} from '../shared/types';
 
 // ---------------------------------------------------------------------------
 // Slider configuration (declarative → DOM)
@@ -94,15 +104,14 @@ const el = {
   toggleBurst: $<HTMLInputElement>('toggle-burst'),
   advancedToggle: $<HTMLButtonElement>('advanced-toggle'),
   advancedPanel: $('advanced-panel'),
-  presetSelect: $<HTMLSelectElement>('preset-select'),
-  presetName: $<HTMLInputElement>('preset-name'),
-  btnLoad: $<HTMLButtonElement>('btn-load'),
-  btnSave: $<HTMLButtonElement>('btn-save'),
-  btnReset: $<HTMLButtonElement>('btn-reset'),
   toast: $('toast'),
-  // Tabs + Rewrite panel
+  // Tabs
   tabs: Array.from(document.querySelectorAll<HTMLButtonElement>('.tab')),
   panels: Array.from(document.querySelectorAll<HTMLElement>('.tab-panel')),
+  // Paste buttons
+  pasteTyping: $<HTMLButtonElement>('paste-typing'),
+  pasteRewrite: $<HTMLButtonElement>('paste-rewrite'),
+  // Rewrite panel
   rewriteInput: $<HTMLTextAreaElement>('rewrite-input'),
   rewriteOutput: $<HTMLTextAreaElement>('rewrite-output'),
   rewriteStyle: $<HTMLSelectElement>('rewrite-style'),
@@ -110,6 +119,15 @@ const el = {
   rewriteOutCount: $('rewrite-out-count'),
   btnRewrite: $<HTMLButtonElement>('btn-rewrite'),
   btnRewriteCopy: $<HTMLButtonElement>('btn-rewrite-copy'),
+  // Settings panel — theme
+  themeBg: $<HTMLInputElement>('theme-bg'),
+  themeAccent: $<HTMLInputElement>('theme-accent'),
+  themeText: $<HTMLInputElement>('theme-text'),
+  btnThemeReset: $<HTMLButtonElement>('btn-theme-reset'),
+  // Settings panel — keybinds
+  kbPause: $<HTMLButtonElement>('kb-pause'),
+  kbStop: $<HTMLButtonElement>('kb-stop'),
+  btnKeybindReset: $<HTMLButtonElement>('btn-keybind-reset'),
 };
 
 // ---------------------------------------------------------------------------
@@ -362,47 +380,147 @@ function renderProgress(progress: TypingProgress): void {
 }
 
 // ===========================================================================
-// Presets
+// Paste buttons
 // ===========================================================================
-let presetCache: Preset[] = [];
-
-async function refreshPresets(selectId?: string): Promise<void> {
-  presetCache = await getAllPresets();
-  el.presetSelect.innerHTML = '';
-  for (const preset of presetCache) {
-    const option = document.createElement('option');
-    option.value = preset.id;
-    option.textContent = preset.builtIn ? `★ ${preset.name}` : preset.name;
-    el.presetSelect.append(option);
-  }
-  if (selectId) el.presetSelect.value = selectId;
-}
-
-async function onLoadPreset(): Promise<void> {
-  const preset = presetCache.find((p) => p.id === el.presetSelect.value);
-  if (!preset) return;
-  settings = { ...preset.settings };
-  applySettingsToUI();
-  await saveSettings(settings);
-  toast(`Loaded “${preset.name}”.`, 'success');
-}
-
-async function onSavePreset(): Promise<void> {
-  const name = el.presetName.value.trim();
-  if (!name) {
-    toast('Name your preset first.', 'error');
+async function pasteInto(target: HTMLTextAreaElement): Promise<void> {
+  let text = '';
+  try {
+    text = await navigator.clipboard.readText();
+  } catch {
+    toast('Couldn’t read the clipboard. Press Ctrl/⌘ + V instead.', 'error');
     return;
   }
-  const preset = await savePreset(name, settings);
-  el.presetName.value = '';
-  await refreshPresets(preset.id);
-  toast(`Saved “${preset.name}”.`, 'success');
+  if (!text) {
+    toast('Your clipboard is empty.', 'error');
+    return;
+  }
+  // Insert at the caret (replacing any selection), like a real paste.
+  const start = target.selectionStart ?? target.value.length;
+  const end = target.selectionEnd ?? start;
+  target.value = target.value.slice(0, start) + text + target.value.slice(end);
+  const caret = start + text.length;
+  target.focus();
+  target.setSelectionRange(caret, caret);
+  target.dispatchEvent(new Event('input', { bubbles: true }));
+  toast('Pasted from clipboard.', 'success');
 }
 
-async function onReset(): Promise<void> {
-  settings = await resetSettings();
-  applySettingsToUI();
-  toast('Settings reset to defaults.', 'success');
+// ===========================================================================
+// Theme (custom colours)
+// ===========================================================================
+let theme: ThemeSettings;
+let themeSaveTimer: number | undefined;
+
+/** Push the theme colours onto the CSS custom properties the whole UI uses. */
+function applyTheme(t: ThemeSettings): void {
+  const root = document.documentElement.style;
+  root.setProperty('--bg', t.background);
+  root.setProperty(
+    '--bg-grad',
+    `radial-gradient(120% 120% at 50% 0%, ${lighten(t.background, 0.08)} 0%, ${t.background} 60%)`,
+  );
+  root.setProperty('--text', t.text);
+  root.setProperty('--gold', t.accent);
+  root.setProperty('--gold-bright', lighten(t.accent, 0.18));
+  const { r, g, b } = hexToRgb(t.accent);
+  root.setProperty('--gold-soft', `rgba(${r}, ${g}, ${b}, 0.16)`);
+  root.setProperty('--gold-line', `rgba(${r}, ${g}, ${b}, 0.4)`);
+}
+
+function syncThemeInputs(): void {
+  el.themeBg.value = theme.background;
+  el.themeAccent.value = theme.accent;
+  el.themeText.value = theme.text;
+}
+
+function scheduleThemeSave(): void {
+  clearTimeout(themeSaveTimer);
+  themeSaveTimer = window.setTimeout(() => void saveTheme(theme), 250);
+}
+
+function onThemeInput(): void {
+  theme = {
+    background: el.themeBg.value,
+    accent: el.themeAccent.value,
+    text: el.themeText.value,
+  };
+  applyTheme(theme);
+  scheduleThemeSave();
+}
+
+async function onThemeReset(): Promise<void> {
+  theme = await resetTheme();
+  syncThemeInputs();
+  applyTheme(theme);
+  toast('Colours reset to default.', 'success');
+}
+
+// ---- hex helpers --------------------------------------------------------
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  const n = parseInt(h, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+function lighten(hex: string, amount: number): string {
+  const { r, g, b } = hexToRgb(hex);
+  const up = (c: number) => Math.round(c + (255 - c) * amount);
+  return `rgb(${up(r)}, ${up(g)}, ${up(b)})`;
+}
+
+// ===========================================================================
+// Keybinds (editable shortcuts)
+// ===========================================================================
+let keybinds: KeybindSettings;
+let recording = false;
+
+function syncKeybindLabels(): void {
+  el.kbPause.textContent = formatCombo(keybinds.pauseResume);
+  el.kbStop.textContent = formatCombo(keybinds.stop);
+}
+
+/** Capture the next key combo the user presses and assign it to a shortcut. */
+function recordKeybind(button: HTMLButtonElement, which: keyof KeybindSettings): void {
+  if (recording) return;
+  recording = true;
+  button.dataset.recording = 'true';
+  button.textContent = 'Press keys…';
+
+  const onKey = (e: KeyboardEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const combo = comboFromKeyboardEvent(e);
+    if (!combo) return; // ignore lone modifier keys; wait for the real key
+    keybinds = { ...keybinds, [which]: combo };
+    document.removeEventListener('keydown', onKey, true);
+    recording = false;
+    button.removeAttribute('data-recording');
+    syncKeybindLabels();
+    void saveKeybinds(keybinds);
+    toast('Shortcut updated.', 'success');
+  };
+
+  document.addEventListener('keydown', onKey, true);
+}
+
+async function onKeybindReset(): Promise<void> {
+  keybinds = await resetKeybinds();
+  syncKeybindLabels();
+  toast('Shortcuts reset to default.', 'success');
+}
+
+/** When the popup is focused, let the shortcuts drive pause/resume + stop too. */
+function handlePopupShortcut(e: KeyboardEvent): void {
+  if (recording) return;
+  const combo = comboFromKeyboardEvent(e);
+  if (!combo) return;
+  if (combo === keybinds.pauseResume && (engineState === 'typing' || engineState === 'paused')) {
+    e.preventDefault();
+    void onPauseResume();
+  } else if (combo === keybinds.stop && (engineState === 'typing' || engineState === 'paused')) {
+    e.preventDefault();
+    void onStop();
+  }
 }
 
 // ===========================================================================
@@ -512,14 +630,14 @@ function attachEvents(): void {
     el.advancedPanel.hidden = open;
   });
 
-  el.btnLoad.addEventListener('click', () => void onLoadPreset());
-  el.btnSave.addEventListener('click', () => void onSavePreset());
-  el.btnReset.addEventListener('click', () => void onReset());
-
   // Tabs
   for (const tab of el.tabs) {
     tab.addEventListener('click', () => activateTab(tab.dataset.panel!));
   }
+
+  // Paste buttons
+  el.pasteTyping.addEventListener('click', () => void pasteInto(el.textInput));
+  el.pasteRewrite.addEventListener('click', () => void pasteInto(el.rewriteInput));
 
   // Rewrite panel
   el.rewriteInput.addEventListener('input', () => {
@@ -529,6 +647,20 @@ function attachEvents(): void {
   el.rewriteStyle.addEventListener('change', () => persistRewriteDraft());
   el.btnRewrite.addEventListener('click', () => onRewrite());
   el.btnRewriteCopy.addEventListener('click', () => void onRewriteCopy());
+
+  // Settings — theme colours
+  el.themeBg.addEventListener('input', onThemeInput);
+  el.themeAccent.addEventListener('input', onThemeInput);
+  el.themeText.addEventListener('input', onThemeInput);
+  el.btnThemeReset.addEventListener('click', () => void onThemeReset());
+
+  // Settings — editable keybinds
+  el.kbPause.addEventListener('click', () => recordKeybind(el.kbPause, 'pauseResume'));
+  el.kbStop.addEventListener('click', () => recordKeybind(el.kbStop, 'stop'));
+  el.btnKeybindReset.addEventListener('click', () => void onKeybindReset());
+
+  // Let the shortcuts work while the popup itself is focused.
+  document.addEventListener('keydown', handlePopupShortcut);
 
   // Progress events broadcast by the content script.
   chrome.runtime.onMessage.addListener((message) => {
@@ -558,7 +690,14 @@ async function init(): Promise<void> {
   el.rewriteInCount.textContent = String(draft.original.length);
   el.rewriteOutCount.textContent = String(draft.rewritten.length);
 
-  await refreshPresets();
+  // Theme + editable shortcuts.
+  theme = await getTheme();
+  syncThemeInputs();
+  applyTheme(theme);
+
+  keybinds = await getKeybinds();
+  syncKeybindLabels();
+
   attachEvents();
 
   // Sync with the active tab: which editor, and any in-progress typing.

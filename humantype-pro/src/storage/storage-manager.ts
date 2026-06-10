@@ -8,14 +8,21 @@
  * at read time.
  */
 
-import { BUILT_IN_PRESETS, DEFAULT_SETTINGS } from '../shared/defaults';
-import type { Preset, TypingSettings } from '../shared/types';
+import {
+  BUILT_IN_PRESETS,
+  DEFAULT_KEYBINDS,
+  DEFAULT_SETTINGS,
+  DEFAULT_THEME,
+} from '../shared/defaults';
+import type { KeybindSettings, Preset, ThemeSettings, TypingSettings } from '../shared/types';
 
 const KEYS = {
   settings: 'ht_settings',
   presets: 'ht_user_presets',
   lastText: 'ht_last_text',
   rewriteDraft: 'ht_rewrite_draft',
+  theme: 'ht_theme',
+  keybinds: 'ht_keybinds',
 } as const;
 
 /** Read settings, transparently filling any missing keys with defaults. */
@@ -105,6 +112,54 @@ export async function getRewriteDraft(): Promise<RewriteDraft> {
 
 export async function setRewriteDraft(draft: RewriteDraft): Promise<void> {
   await chrome.storage.local.set({ [KEYS.rewriteDraft]: draft });
+}
+
+// ---------------------------------------------------------------------------
+// Theme (custom colours)
+// ---------------------------------------------------------------------------
+export async function getTheme(): Promise<ThemeSettings> {
+  const stored = await chrome.storage.sync.get(KEYS.theme);
+  return { ...DEFAULT_THEME, ...((stored[KEYS.theme] ?? {}) as Partial<ThemeSettings>) };
+}
+
+export async function saveTheme(theme: ThemeSettings): Promise<void> {
+  await chrome.storage.sync.set({ [KEYS.theme]: theme });
+}
+
+export async function resetTheme(): Promise<ThemeSettings> {
+  await chrome.storage.sync.set({ [KEYS.theme]: DEFAULT_THEME });
+  return { ...DEFAULT_THEME };
+}
+
+// ---------------------------------------------------------------------------
+// Keybinds (editable shortcuts)
+// ---------------------------------------------------------------------------
+export async function getKeybinds(): Promise<KeybindSettings> {
+  const stored = await chrome.storage.sync.get(KEYS.keybinds);
+  return { ...DEFAULT_KEYBINDS, ...((stored[KEYS.keybinds] ?? {}) as Partial<KeybindSettings>) };
+}
+
+export async function saveKeybinds(keybinds: KeybindSettings): Promise<void> {
+  await chrome.storage.sync.set({ [KEYS.keybinds]: keybinds });
+}
+
+export async function resetKeybinds(): Promise<KeybindSettings> {
+  await chrome.storage.sync.set({ [KEYS.keybinds]: DEFAULT_KEYBINDS });
+  return { ...DEFAULT_KEYBINDS };
+}
+
+/** Watch for keybind changes from other contexts (used by the content script). */
+export function onKeybindsChanged(callback: (keybinds: KeybindSettings) => void): () => void {
+  const listener = (
+    changes: Record<string, chrome.storage.StorageChange>,
+    area: string,
+  ): void => {
+    if (area === 'sync' && changes[KEYS.keybinds]) {
+      callback({ ...DEFAULT_KEYBINDS, ...(changes[KEYS.keybinds].newValue as Partial<KeybindSettings>) });
+    }
+  };
+  chrome.storage.onChanged.addListener(listener);
+  return () => chrome.storage.onChanged.removeListener(listener);
 }
 
 /** Subscribe to settings changes from other contexts. Returns an unsubscribe fn. */

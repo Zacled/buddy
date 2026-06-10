@@ -11,7 +11,10 @@ import { HumanTypingEngine } from '../engine/human-typing-engine';
 import { describeDetection, detectAdapter } from './editors/editor-detector';
 import { isAppMessage } from '../shared/messages';
 import type { CommandMessage, CommandResponse } from '../shared/messages';
-import type { TypingProgress, TypingSettings } from '../shared/types';
+import type { KeybindSettings, TypingProgress, TypingSettings } from '../shared/types';
+import { DEFAULT_KEYBINDS } from '../shared/defaults';
+import { getKeybinds, onKeybindsChanged } from '../storage/storage-manager';
+import { comboFromKeyboardEvent } from '../utils/keybind';
 import { log } from '../utils/logger';
 
 /** Short sample used by the "Test" button so users can preview a feel. */
@@ -103,5 +106,39 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   return true; // keep the channel open for the async response
 });
+
+// ---------------------------------------------------------------------------
+// Editable keyboard shortcuts (only act while typing, so we never hijack keys)
+// ---------------------------------------------------------------------------
+let keybinds: KeybindSettings = DEFAULT_KEYBINDS;
+void getKeybinds().then((k) => {
+  keybinds = k;
+});
+onKeybindsChanged((k) => {
+  keybinds = k;
+});
+
+function engineIsActive(): boolean {
+  const state = engine?.getState();
+  return state === 'typing' || state === 'paused';
+}
+
+document.addEventListener(
+  'keydown',
+  (event) => {
+    if (!engineIsActive()) return;
+    const combo = comboFromKeyboardEvent(event);
+    if (!combo) return;
+
+    if (combo === keybinds.pauseResume) {
+      event.preventDefault();
+      void handleCommand({ type: 'TOGGLE_PAUSE' });
+    } else if (combo === keybinds.stop) {
+      event.preventDefault();
+      void handleCommand({ type: 'STOP_TYPING' });
+    }
+  },
+  true,
+);
 
 log.info('content script ready on', location.host);

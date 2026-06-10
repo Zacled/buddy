@@ -35,24 +35,7 @@
     }
   ],
 
-  "permissions": ["storage", "activeTab", "notifications"],
+  "permissions": ["storage", "activeTab", "notifications", "clipboardRead", "clipboardWrite"],
 
-  "host_permissions": ["<all_urls>"],
-
-  "commands": {
-    "toggle-pause": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+Space",
-        "mac": "Command+Shift+Space"
-      },
-      "description": "Pause / resume typing"
-    },
-    "stop-typing": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+U",
-        "mac": "Command+Shift+U"
-      },
-      "description": "Stop typing"
-    }
-  }
+  "host_permissions": ["<all_urls>"]
 }

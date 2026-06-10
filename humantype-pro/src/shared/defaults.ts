@@ -2,7 +2,20 @@
  * HumanType Pro — Default settings and built-in presets.
  */
 
-import type { Preset, TypingSettings } from './types';
+import type { KeybindSettings, Preset, ThemeSettings, TypingSettings } from './types';
+
+/** Default popup colours (the original dark + gold theme). */
+export const DEFAULT_THEME: ThemeSettings = {
+  background: '#0e0f13',
+  accent: '#d4af37',
+  text: '#ecebe6',
+};
+
+/** Default editable keyboard shortcuts. */
+export const DEFAULT_KEYBINDS: KeybindSettings = {
+  pauseResume: 'Ctrl+Shift+Space',
+  stop: 'Ctrl+Shift+U',
+};
 
 /** Sensible, natural-feeling defaults used on first install and by "Reset". */
 export const DEFAULT_SETTINGS: TypingSettings = {

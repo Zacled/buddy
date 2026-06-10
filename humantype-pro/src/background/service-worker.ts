@@ -1,23 +1,22 @@
 /**
  * HumanType Pro — Background service worker (Manifest V3).
  *
- * The service worker is the extension's coordinator. It:
- *   • seeds default settings on install,
- *   • reflects live typing progress onto the toolbar badge,
- *   • fires a desktop notification when a run finishes,
- *   • and relays keyboard-shortcut commands (pause/resume, stop) to the
- *     active tab's content script.
+ * Lightweight coordinator. It:
+ *   • seeds default settings on install, and
+ *   • fires a desktop notification when a run finishes or errors.
  *
- * It deliberately holds no heavy state — MV3 workers are torn down when idle, so
- * all durable data lives in `chrome.storage`.
+ * It no longer paints a progress number on the toolbar icon (kept quiet by
+ * request), and keyboard shortcuts are handled in-page by the content script so
+ * they can be edited from the Settings tab.
+ *
+ * MV3 workers are torn down when idle, so all durable data lives in
+ * `chrome.storage`.
  */
 
 import { DEFAULT_SETTINGS } from '../shared/defaults';
 import { isAppMessage } from '../shared/messages';
-import type { CommandMessage } from '../shared/messages';
 import type { TypingProgress } from '../shared/types';
 
-const GOLD = '#d4af37';
 const NOTIFICATION_ICON = 'icons/icon128.png';
 
 // ---------------------------------------------------------------------------
@@ -28,50 +27,21 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (!existing.ht_settings) {
     await chrome.storage.sync.set({ ht_settings: DEFAULT_SETTINGS });
   }
-  chrome.action.setBadgeBackgroundColor({ color: GOLD });
 });
 
 // ---------------------------------------------------------------------------
-// Progress → badge + notifications
+// Progress → notifications only (no toolbar badge)
 // ---------------------------------------------------------------------------
-chrome.runtime.onMessage.addListener((message, sender) => {
+chrome.runtime.onMessage.addListener((message) => {
   if (!isAppMessage(message) || message.type !== 'PROGRESS') return;
   const progress = message.progress as TypingProgress;
-  const tabId = sender.tab?.id;
-  reflectProgress(progress, tabId);
-});
 
-function reflectProgress(progress: TypingProgress, tabId?: number): void {
-  const badge = (text: string, color = GOLD) => {
-    chrome.action.setBadgeBackgroundColor({ color, ...(tabId ? { tabId } : {}) });
-    chrome.action.setBadgeText({ text, ...(tabId ? { tabId } : {}) });
-  };
-
-  switch (progress.state) {
-    case 'typing': {
-      const pct = Math.round(progress.ratio * 100);
-      badge(`${pct}`);
-      break;
-    }
-    case 'paused':
-      badge('II');
-      break;
-    case 'finished':
-      badge('✓', '#2e9e5b');
-      notify('Typing complete', `Finished typing ${progress.totalChars} characters.`);
-      // Clear the checkmark after a short while.
-      setTimeout(() => badge(''), 4000);
-      break;
-    case 'error':
-      badge('!', '#c0392b');
-      notify('Typing stopped', progress.message ?? 'An error occurred while typing.');
-      break;
-    case 'idle':
-    default:
-      badge('');
-      break;
+  if (progress.state === 'finished') {
+    notify('Typing complete', `Finished typing ${progress.totalChars} characters.`);
+  } else if (progress.state === 'error') {
+    notify('Typing stopped', progress.message ?? 'An error occurred while typing.');
   }
-}
+});
 
 function notify(title: string, message: string): void {
   // Notifications are best-effort; ignore failures (e.g. permission revoked).
@@ -87,22 +57,3 @@ function notify(title: string, message: string): void {
     /* no-op */
   }
 }
-
-// ---------------------------------------------------------------------------
-// Keyboard shortcuts → active tab
-// ---------------------------------------------------------------------------
-chrome.commands?.onCommand.addListener(async (command) => {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) return;
-
-  const message: CommandMessage | null =
-    command === 'stop-typing'
-      ? { type: 'STOP_TYPING' }
-      : command === 'toggle-pause'
-        ? { type: 'TOGGLE_PAUSE' } // pauses if typing, resumes if paused
-        : null;
-
-  if (message) {
-    chrome.tabs.sendMessage(tab.id, message).catch(() => undefined);
-  }
-});
