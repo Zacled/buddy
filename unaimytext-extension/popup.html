@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>UnAIMyText — AI Text Humanizer</title>
+    <title>HumanType Pro + UnAIMyText</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
@@ -11,15 +11,14 @@
       <!-- ============================ Header ============================ -->
       <header class="header">
         <div class="brand">
-          <div class="brand__mark" aria-hidden="true">U</div>
+          <div class="brand__mark" aria-hidden="true">H</div>
           <div class="brand__text">
-            <h1 class="brand__title">UnAI<span>MyText</span></h1>
-            <p class="brand__tag">Humanize AI text — free, in your browser</p>
+            <h1 class="brand__title">HumanType <span>Pro</span></h1>
+            <p class="brand__tag">Auto typer + AI text humanizer</p>
           </div>
         </div>
         <a
           class="site-link"
-          id="open-site"
           href="https://unaimytext.com/"
           target="_blank"
           rel="noopener noreferrer"
@@ -29,133 +28,276 @@
         </a>
       </header>
 
-      <!-- ========================= Mode selector ======================= -->
-      <section class="block">
-        <span class="field-label">Humanization level</span>
-        <div class="modes" role="radiogroup" aria-label="Humanization level">
-          <button class="mode mode--active" data-mode="standard" role="radio" aria-checked="true">
-            <span class="mode__name">Standard</span>
-            <span class="mode__desc">Light fixes</span>
-          </button>
-          <button class="mode" data-mode="enhanced" role="radio" aria-checked="false">
-            <span class="mode__name">Enhanced</span>
-            <span class="mode__desc">Deeper rewrite</span>
-          </button>
-          <button class="mode" data-mode="aggressive" role="radio" aria-checked="false">
-            <span class="mode__name">Aggressive</span>
-            <span class="mode__desc">Remove all tells</span>
-          </button>
-        </div>
-      </section>
-
-      <!-- ============================ Input ============================ -->
-      <section class="block">
-        <label class="field-label" for="input">Your AI-generated text</label>
-        <textarea
-          id="input"
-          class="text-input"
-          spellcheck="false"
-          placeholder="Paste AI-generated text here and click Humanize Text…"
-        ></textarea>
-        <div class="meta">
-          <span class="meta__item"><strong id="in-words">0</strong> words</span>
-          <span class="meta__item"><strong id="in-chars">0</strong> chars</span>
-        </div>
-      </section>
-
-      <!-- ====================== Advanced settings ====================== -->
-      <section class="block">
-        <button class="section-toggle" id="advanced-toggle" aria-expanded="false">
-          <span><span class="gear" aria-hidden="true">⚙</span> Advanced cleanup</span>
-          <span class="section-toggle__chevron">▾</span>
+      <!-- ============================ Tabs ============================= -->
+      <nav class="tabs" role="tablist">
+        <button class="tab tab--active" data-panel="panel-typer" role="tab" aria-selected="true">
+          Auto Typer
         </button>
-        <div class="advanced" id="advanced-panel" hidden>
-          <div class="switch-row">
-            <label class="switch">
-              <input type="checkbox" id="opt-emdash" checked />
-              <span class="switch__track"><span class="switch__thumb"></span></span>
-            </label>
-            <span class="switch-row__label">Convert em-dashes (—) to commas</span>
-          </div>
-          <div class="switch-row">
-            <label class="switch">
-              <input type="checkbox" id="opt-removedash" />
-              <span class="switch__track"><span class="switch__thumb"></span></span>
-            </label>
-            <span class="switch-row__label">Remove dashes completely</span>
-          </div>
-          <div class="switch-row">
-            <label class="switch">
-              <input type="checkbox" id="opt-quotes" checked />
-              <span class="switch__track"><span class="switch__thumb"></span></span>
-            </label>
-            <span class="switch-row__label">Straighten smart quotes (“ ” → " ')</span>
-          </div>
-          <div class="switch-row">
-            <label class="switch">
-              <input type="checkbox" id="opt-unicode" checked />
-              <span class="switch__track"><span class="switch__thumb"></span></span>
-            </label>
-            <span class="switch-row__label">Remove hidden Unicode (zero-width, NBSP)</span>
-          </div>
-          <div class="switch-row">
-            <label class="switch">
-              <input type="checkbox" id="opt-whitespace" checked />
-              <span class="switch__track"><span class="switch__thumb"></span></span>
-            </label>
-            <span class="switch-row__label">Remove persistent whitespace</span>
-          </div>
-          <div class="switch-row">
-            <label class="switch">
-              <input type="checkbox" id="opt-contractions" checked />
-              <span class="switch__track"><span class="switch__thumb"></span></span>
-            </label>
-            <span class="switch-row__label">Use natural contractions (don't, it's)</span>
-          </div>
-        </div>
-      </section>
+        <button class="tab" data-panel="panel-rewriter" role="tab" aria-selected="false">
+          UnAIMyText Rewriter
+        </button>
+      </nav>
 
-      <!-- ============================ Action =========================== -->
-      <button class="btn btn--primary btn--block" id="btn-humanize">
-        <span class="btn__icon">✦</span> Humanize Text
-      </button>
+      <!-- ====================== Panel: Auto Typer ====================== -->
+      <div id="panel-typer" class="tab-panel">
+        <!-- Editor chip + status -->
+        <div class="typer-top">
+          <div class="editor-chip" id="editor-chip" title="The editor detected on the active tab">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+              <path fill="currentColor" d="M3 5h18v2H3zm0 6h18v2H3zm0 6h12v2H3z" />
+            </svg>
+            <span id="editor-label">Detecting editor…</span>
+          </div>
+          <div class="status" id="status">
+            <span class="status__dot" id="status-dot"></span>
+            <span class="status__label" id="status-label">Idle</span>
+          </div>
+        </div>
 
-      <!-- ====================== AI-likeness meter ====================== -->
-      <div class="score" id="score" hidden>
-        <div class="score__row">
-          <span class="score__label">Estimated AI markers</span>
-          <span class="score__values">
-            <span class="score__before" id="score-before">—</span>
-            <span class="score__arrow">→</span>
-            <span class="score__after" id="score-after">—</span>
-          </span>
+        <!-- Text input -->
+        <section class="block">
+          <textarea
+            id="type-input"
+            class="text-input"
+            spellcheck="false"
+            placeholder="Paste or type the text you want typed for you…"
+          ></textarea>
+          <div class="meta">
+            <span class="meta__item"><strong id="type-chars">0</strong> chars</span>
+            <span class="meta__item">≈ <strong id="type-eta">—</strong> to type</span>
+          </div>
+        </section>
+
+        <!-- Progress -->
+        <div class="progress" aria-hidden="true">
+          <div class="progress__fill" id="progress-fill"></div>
         </div>
-        <div class="score__bar">
-          <div class="score__fill" id="score-fill"></div>
-        </div>
+
+        <!-- Controls -->
+        <section class="controls">
+          <button class="btn btn--primary" id="btn-start">
+            <span class="btn__icon">▶</span> Start
+          </button>
+          <button class="btn btn--ghost" id="btn-pause" disabled>
+            <span class="btn__icon">II</span> Pause
+          </button>
+          <button class="btn btn--danger" id="btn-stop" disabled>
+            <span class="btn__icon">■</span> Stop
+          </button>
+          <button class="btn btn--outline" id="btn-test">
+            <span class="btn__icon">✦</span> Test
+          </button>
+        </section>
+
+        <!-- Presets -->
+        <section class="block presets">
+          <div class="presets__row">
+            <select id="preset-select" class="select" aria-label="Presets"></select>
+            <button class="btn btn--mini" id="btn-load">Load</button>
+            <button class="btn btn--mini btn--danger-ghost" id="btn-reset">Reset</button>
+          </div>
+          <div class="presets__row">
+            <input
+              id="preset-name"
+              class="input"
+              type="text"
+              placeholder="Name a new preset…"
+              maxlength="40"
+            />
+            <button class="btn btn--mini btn--accent" id="btn-save">Save</button>
+          </div>
+        </section>
+
+        <!-- Core sliders -->
+        <section class="block">
+          <h2 class="section-title">Typing dynamics</h2>
+          <div id="core-sliders" class="sliders"></div>
+        </section>
+
+        <!-- Advanced behaviour -->
+        <section class="block">
+          <button class="section-toggle" id="typer-advanced-toggle" aria-expanded="false">
+            <span>Advanced behaviour</span>
+            <span class="section-toggle__chevron">▾</span>
+          </button>
+          <div class="advanced" id="typer-advanced-panel" hidden>
+            <div class="switch-row">
+              <label class="switch">
+                <input type="checkbox" id="toggle-longwords" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+              </label>
+              <span class="switch-row__label">Hesitate before long words (pause before difficult words)</span>
+            </div>
+            <div class="sliders" id="longword-sliders"></div>
+
+            <div class="switch-row">
+              <label class="switch">
+                <input type="checkbox" id="toggle-punctuation" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+              </label>
+              <span class="switch-row__label">Hesitate before punctuation (pause before commas and periods)</span>
+            </div>
+
+            <div class="switch-row">
+              <label class="switch">
+                <input type="checkbox" id="toggle-fatigue" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+              </label>
+              <span class="switch-row__label">Fatigue (typing gets slower during long sessions)</span>
+            </div>
+            <div class="sliders" id="fatigue-sliders"></div>
+
+            <div class="switch-row">
+              <label class="switch">
+                <input type="checkbox" id="toggle-burst" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+              </label>
+              <span class="switch-row__label">Burst typing mode (short periods of faster typing)</span>
+            </div>
+            <div class="sliders" id="burst-sliders"></div>
+          </div>
+        </section>
+
+        <footer class="footer">
+          <span>Shortcuts: <kbd>Ctrl/⌘ Shift Space</kbd> pause/resume · <kbd>Ctrl/⌘ Shift U</kbd> stop</span>
+        </footer>
       </div>
+      <!-- ===================== /Panel: Auto Typer ====================== -->
 
-      <!-- ============================ Output =========================== -->
-      <section class="block">
-        <label class="field-label" for="output">Humanized text</label>
-        <textarea
-          id="output"
-          class="text-input text-input--tall"
-          spellcheck="false"
-          readonly
-          placeholder="Your humanized text will appear here."
-        ></textarea>
-        <div class="output-foot">
-          <span class="meta__item"><strong id="out-words">0</strong> words</span>
-          <button class="btn btn--mini btn--accent" id="btn-copy">Copy</button>
+      <!-- ================== Panel: UnAIMyText Rewriter ================= -->
+      <div id="panel-rewriter" class="tab-panel" hidden>
+        <!-- Mode selector -->
+        <section class="block">
+          <span class="field-label">Humanization level</span>
+          <div class="modes" role="radiogroup" aria-label="Humanization level">
+            <button class="mode mode--active" data-mode="standard" role="radio" aria-checked="true">
+              <span class="mode__name">Standard</span>
+              <span class="mode__desc">Light fixes</span>
+            </button>
+            <button class="mode" data-mode="enhanced" role="radio" aria-checked="false">
+              <span class="mode__name">Enhanced</span>
+              <span class="mode__desc">Deeper rewrite</span>
+            </button>
+            <button class="mode" data-mode="aggressive" role="radio" aria-checked="false">
+              <span class="mode__name">Aggressive</span>
+              <span class="mode__desc">Remove all tells</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Input -->
+        <section class="block">
+          <label class="field-label" for="input">Your AI-generated text</label>
+          <textarea
+            id="input"
+            class="text-input"
+            spellcheck="false"
+            placeholder="Paste AI-generated text here and click Humanize Text…"
+          ></textarea>
+          <div class="meta">
+            <span class="meta__item"><strong id="in-words">0</strong> words</span>
+            <span class="meta__item"><strong id="in-chars">0</strong> chars</span>
+          </div>
+        </section>
+
+        <!-- Advanced cleanup -->
+        <section class="block">
+          <button class="section-toggle" id="advanced-toggle" aria-expanded="false">
+            <span><span class="gear" aria-hidden="true">⚙</span> Advanced cleanup</span>
+            <span class="section-toggle__chevron">▾</span>
+          </button>
+          <div class="advanced" id="advanced-panel" hidden>
+            <div class="switch-row">
+              <label class="switch">
+                <input type="checkbox" id="opt-emdash" checked />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+              </label>
+              <span class="switch-row__label">Convert em-dashes (—) to commas</span>
+            </div>
+            <div class="switch-row">
+              <label class="switch">
+                <input type="checkbox" id="opt-removedash" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+              </label>
+              <span class="switch-row__label">Remove dashes completely</span>
+            </div>
+            <div class="switch-row">
+              <label class="switch">
+                <input type="checkbox" id="opt-quotes" checked />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+              </label>
+              <span class="switch-row__label">Straighten smart quotes (“ ” → " ')</span>
+            </div>
+            <div class="switch-row">
+              <label class="switch">
+                <input type="checkbox" id="opt-unicode" checked />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+              </label>
+              <span class="switch-row__label">Remove hidden Unicode (zero-width, NBSP)</span>
+            </div>
+            <div class="switch-row">
+              <label class="switch">
+                <input type="checkbox" id="opt-whitespace" checked />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+              </label>
+              <span class="switch-row__label">Remove persistent whitespace</span>
+            </div>
+            <div class="switch-row">
+              <label class="switch">
+                <input type="checkbox" id="opt-contractions" checked />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+              </label>
+              <span class="switch-row__label">Use natural contractions (don't, it's)</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Action -->
+        <button class="btn btn--primary btn--block" id="btn-humanize">
+          <span class="btn__icon">✦</span> Humanize Text
+        </button>
+
+        <!-- AI-likeness meter -->
+        <div class="score" id="score" hidden>
+          <div class="score__row">
+            <span class="score__label">Estimated AI markers</span>
+            <span class="score__values">
+              <span class="score__before" id="score-before">—</span>
+              <span class="score__arrow">→</span>
+              <span class="score__after" id="score-after">—</span>
+            </span>
+          </div>
+          <div class="score__bar">
+            <div class="score__fill" id="score-fill"></div>
+          </div>
         </div>
-      </section>
 
-      <p class="note">
-        Runs entirely in your browser — no signup, nothing leaves this device.
-        The marker estimate is a guide, not a guarantee. For the full toolset,
-        <a href="https://unaimytext.com/" target="_blank" rel="noopener noreferrer">open UnAIMyText.com</a>.
-      </p>
+        <!-- Output -->
+        <section class="block">
+          <label class="field-label" for="output">Humanized text</label>
+          <textarea
+            id="output"
+            class="text-input text-input--tall"
+            spellcheck="false"
+            readonly
+            placeholder="Your humanized text will appear here."
+          ></textarea>
+          <div class="output-foot">
+            <span class="meta__item"><strong id="out-words">0</strong> words</span>
+            <div class="output-actions">
+              <button class="btn btn--mini" id="btn-send-typer">Send to Typer</button>
+              <button class="btn btn--mini btn--accent" id="btn-copy">Copy</button>
+            </div>
+          </div>
+        </section>
+
+        <p class="note">
+          Runs entirely in your browser — no signup, nothing leaves this device.
+          The marker estimate is a guide, not a guarantee. For the full toolset,
+          <a href="https://unaimytext.com/" target="_blank" rel="noopener noreferrer">open UnAIMyText.com</a>.
+        </p>
+      </div>
+      <!-- ================= /Panel: UnAIMyText Rewriter ================= -->
 
       <div class="credit">made by Zac</div>
     </div>

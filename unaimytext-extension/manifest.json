@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "UnAIMyText — AI Text Humanizer",
-  "version": "2.0.0",
-  "description": "Humanize AI-generated text: strip AI tells, fix em-dashes and smart quotes, remove hidden Unicode, and rewrite for a natural human voice — or open the full UnAIMyText site.",
-  "author": "UnAIMyText",
+  "name": "HumanType Pro + UnAIMyText",
+  "version": "3.0.0",
+  "description": "Auto typer with realistic human typing — speed, pauses, typos, corrections — plus an UnAIMyText-style AI text humanizer, together in one popup.",
+  "author": "Zac",
   "minimum_chrome_version": "110",
 
   "action": {
-    "default_title": "UnAIMyText — AI Text Humanizer",
+    "default_title": "HumanType Pro + UnAIMyText",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -22,5 +22,37 @@
     "128": "icons/icon128.png"
   },
 
-  "permissions": ["storage"]
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+
+  "permissions": ["storage", "activeTab", "notifications"],
+
+  "host_permissions": ["<all_urls>"],
+
+  "commands": {
+    "toggle-pause": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Space",
+        "mac": "Command+Shift+Space"
+      },
+      "description": "Pause / resume typing"
+    },
+    "stop-typing": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+U",
+        "mac": "Command+Shift+U"
+      },
+      "description": "Stop typing"
+    }
+  }
 }
