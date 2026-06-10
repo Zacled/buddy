@@ -37,6 +37,11 @@
   padding: 0;
 }
 
+/* The hidden attribute must always win, even over display:flex rules. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   width: 392px;

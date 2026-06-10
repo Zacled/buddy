@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "HumanType Pro + UnAIMyText",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Auto typer with realistic human typing — speed, pauses, typos, corrections — plus an UnAIMyText-style AI text humanizer, together in one popup.",
   "author": "Zac",
   "minimum_chrome_version": "110",
