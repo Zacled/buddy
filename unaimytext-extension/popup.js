@@ -291,7 +291,17 @@
     try {
       return await chrome.tabs.sendMessage(tab.id, message);
     } catch {
-      return null;
+      // No content script in this tab — typical for tabs that were already
+      // open when the extension was installed or updated. Inject and retry.
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ["content-script.js"],
+        });
+        return await chrome.tabs.sendMessage(tab.id, message);
+      } catch {
+        return null;
+      }
     }
   }
 

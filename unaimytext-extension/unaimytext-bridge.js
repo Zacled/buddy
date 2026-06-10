@@ -6,10 +6,16 @@
    2. Inject a floating "Send to Auto Typer" button. Clicking it grabs the
       humanized result from the page and stores it as the Auto Typer text,
       so it's loaded the next time the popup opens.
+
+   The site renders its result in a "HUMAN OUTPUT" panel as styled spans
+   (not a textarea), so capture works by finding coherent text blocks and
+   taking the largest group — with the user's selection as a last resort.
    =========================================================================== */
 (() => {
   "use strict";
   if (window.top !== window) return;
+  if (window.__uamtBridge) return;
+  window.__uamtBridge = true;
 
   const PENDING_KEY = "uamt_pending_text";
   const LAST_TEXT_KEY = "ht_last_text";
@@ -24,7 +30,7 @@
   function isVisible(el) {
     if (!(el instanceof HTMLElement)) return false;
     const rect = el.getBoundingClientRect();
-    if (rect.width < 60 || rect.height < 30) return false;
+    if (rect.width < 60 || rect.height < 16) return false;
     const style = getComputedStyle(el);
     return style.display !== "none" && style.visibility !== "hidden";
   }
@@ -55,7 +61,7 @@
     const areas = Array.from(document.querySelectorAll("textarea"))
       .filter((t) => isVisible(t) && !t.readOnly && !t.disabled);
     const hinted = areas.find((t) =>
-      /input|original|paste|your|source/i.test(
+      /input|original|paste|your|source|content/i.test(
         `${t.id} ${t.className} ${t.placeholder ?? ""} ${t.getAttribute("aria-label") ?? ""}`
       )
     );
@@ -107,31 +113,130 @@
   }
 
   /* --------------------------- Output detection ------------------------- */
-  function grabOutput() {
-    const inputText = lastFilledText || (findInputBox() ? elementText(findInputBox()).trim() : "");
-    const notEcho = (text) => text.length >= 20 && text !== inputText;
+  // Tags that don't break a run of prose.
+  const INLINE_TAGS = new Set([
+    "SPAN", "B", "I", "EM", "STRONG", "MARK", "A", "BR", "CODE",
+    "SMALL", "SUP", "SUB", "U", "S", "ABBR", "TIME", "WBR",
+  ]);
 
-    // 1. Elements that say they hold the result.
+  // A "text block" is an element whose children are inline-only — the way
+  // the site renders output prose (a div full of styled spans).
+  function isTextBlock(el) {
+    if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) return false;
+    if (el.isContentEditable) return false;
+    if (el.id && el.id.startsWith("uamt-")) return false;
+    if (el.closest('[id^="uamt-"]')) return false;
+    if (!isVisible(el)) return false;
+    for (const child of el.children) {
+      if (!INLINE_TAGS.has(child.tagName)) return false;
+    }
+    return true;
+  }
+
+  function looksLikeEcho(text, inputText) {
+    if (!inputText) return false;
+    if (text === inputText) return true;
+    // Same opening = the site is just mirroring the input.
+    const probe = Math.min(120, inputText.length, text.length);
+    return probe >= 60 && text.slice(0, probe) === inputText.slice(0, probe);
+  }
+
+  // Collect text blocks inside `scope`, group them by parent, and return
+  // the biggest group — that's the result prose, never the badges or
+  // word-count chrome around it.
+  function extractMainText(scope, inputText) {
+    const blocks = [];
+    for (const el of scope.querySelectorAll("*")) {
+      if (!isTextBlock(el)) continue;
+      const text = elementText(el).trim();
+      if (text.length < 25) continue;
+      if (looksLikeEcho(text, inputText)) continue;
+      blocks.push(el);
+    }
+    if (scope !== document.body && scope instanceof HTMLElement && isTextBlock(scope)) {
+      const text = elementText(scope).trim();
+      if (text.length >= 25 && !looksLikeEcho(text, inputText)) blocks.push(scope);
+    }
+
+    const groups = new Map();
+    for (const block of blocks) {
+      // Skip blocks nested inside another collected block (keep the outer).
+      if (blocks.some((other) => other !== block && other.contains(block))) continue;
+      const key = block.parentElement ?? block;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(block);
+    }
+
+    let best = null;
+    let bestLen = 0;
+    for (const els of groups.values()) {
+      const text = els.map((e) => elementText(e).trim()).join("\n\n");
+      if (text.length > bestLen) {
+        bestLen = text.length;
+        best = text;
+      }
+    }
+    return bestLen >= 25 ? best : null;
+  }
+
+  // Find a small element that *is* the "HUMAN OUTPUT" heading, then climb
+  // to the panel that holds the result.
+  function findOutputPanel() {
+    for (const el of document.querySelectorAll("h1,h2,h3,h4,h5,h6,span,div,p,label,strong")) {
+      if (el.children.length > 3) continue;
+      const text = (el.textContent ?? "").trim();
+      if (text.length > 40) continue;
+      if (!/human\s*output|humanized\s*(text|output|version)/i.test(text)) continue;
+      let panel = el;
+      for (let depth = 0; depth < 8 && panel.parentElement; depth++) {
+        panel = panel.parentElement;
+        const panelText = elementText(panel).trim();
+        if (panelText.length > text.length + 120) return panel;
+      }
+    }
+    return null;
+  }
+
+  function grabOutput() {
+    const inputBox = findInputBox();
+    const inputText = lastFilledText || (inputBox ? elementText(inputBox).trim() : "");
+
+    // 1. The site's "HUMAN OUTPUT" panel.
+    const panel = findOutputPanel();
+    if (panel) {
+      const text = extractMainText(panel, inputText);
+      if (text) return text;
+    }
+
+    // 2. Elements whose id/class say they hold the result.
     const hinted = Array.from(
       document.querySelectorAll(
         '[id*="output" i], [class*="output" i], [id*="result" i], [class*="result" i], [id*="humanized" i], [class*="humanized" i]'
       )
-    ).filter((el) => isVisible(el) && !el.id.startsWith("uamt-"));
+    ).filter((el) => el instanceof HTMLElement && !el.id.startsWith("uamt-"));
     for (const el of hinted) {
-      const text = elementText(el).trim();
-      if (notEcho(text)) return text;
+      const text = el instanceof HTMLTextAreaElement
+        ? el.value.trim()
+        : extractMainText(el, inputText);
+      if (text && text.length >= 25 && !looksLikeEcho(text, inputText)) return text;
     }
 
-    // 2. A read-only textarea, or the last textarea that isn't the input.
+    // 3. A read-only textarea, or the last textarea that isn't the input.
     const areas = Array.from(document.querySelectorAll("textarea")).filter(isVisible);
-    const readonly = areas.find((t) => (t.readOnly || t.disabled) && notEcho(t.value.trim()));
+    const readonly = areas.find(
+      (t) => (t.readOnly || t.disabled) && t.value.trim().length >= 25 && !looksLikeEcho(t.value.trim(), inputText)
+    );
     if (readonly) return readonly.value.trim();
     for (let i = areas.length - 1; i >= 0; i--) {
       const text = areas[i].value.trim();
-      if (notEcho(text)) return text;
+      if (areas[i] !== inputBox && text.length >= 25 && !looksLikeEcho(text, inputText)) return text;
     }
 
-    // 3. Whatever the user has selected on the page.
+    // 4. Biggest prose group anywhere on the page.
+    const generic = extractMainText(document.body, inputText);
+    if (generic && generic.length >= 60) return generic;
+
+    // 5. Whatever the user has selected on the page.
     const selection = String(window.getSelection() ?? "").trim();
     if (selection.length > 0) return selection;
 
