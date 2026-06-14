@@ -37,7 +37,7 @@
       const obj = await parse(code);
       if (!obj) return { valid: false };
       const expired = !!(obj.exp && Date.now() > obj.exp);
-      return { valid: !expired, expired, id: obj.id || "", exp: obj.exp || null };
+      return { valid: !expired, expired, id: obj.id || "", exp: obj.exp || null, jti: obj.jti || "" };
     } catch (e) { return { valid: false }; }
   }
   self.WPLicense = { verify, info };

@@ -5,7 +5,14 @@
   "description": "An efficient content blocker. Blocks ads, trackers, miners, and more immediately upon installation.",
   "minimum_chrome_version": "111",
   "permissions": ["storage"],
-  "host_permissions": ["*://wheelofnames.com/*", "*://*.wheelofnames.com/*"],
+  "host_permissions": [
+    "*://wheelofnames.com/*",
+    "*://*.wheelofnames.com/*",
+    "https://gist.githubusercontent.com/*",
+    "https://raw.githubusercontent.com/*",
+    "https://pastebin.com/*",
+    "https://*.pastebin.com/*"
+  ],
   "background": { "service_worker": "src/sw.js" },
   "action": {
     "default_popup": "src/popup.html",

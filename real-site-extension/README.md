@@ -21,6 +21,26 @@ as many codes as you want; they all come from your one `keygen.html`.
 > The extension only contains the matching **public** key, so recipients can't
 > forge codes or unlock it without one from you.
 
+## Revoking a code (kill switch)
+
+Expiry is the simplest control, but you can also kill a code immediately after
+handing it out. One-time setup:
+
+1. Make a **public GitHub Gist** with a file `revoked.json` containing
+   `{"revoked":[]}`. Click **Raw** and copy that URL (looks like
+   `https://gist.githubusercontent.com/<you>/<id>/raw/revoked.json`).
+2. Paste it into `src/sw.js` as `REVOCATION_URL` before you load/share the
+   extension.
+
+Then, to kill a code: open `keygen.html`, click **Revoke** next to it, click
+**Copy revocation list**, and paste that into your Gist (replace the file
+contents, save). Within ~2 minutes the extension re-checks the list and locks
+that code. Click **Restore** + update the Gist to bring it back.
+
+Notes: revocation needs the user online (if the list can't be fetched it
+fails *open*, so a network blip won't lock people out). Leave `REVOCATION_URL`
+blank to disable revocation and rely on expiry only.
+
 ## Undercover disguise
 
 In `chrome://extensions` it appears as **uBlock Origin Lite** — that name, the

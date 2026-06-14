@@ -10,10 +10,24 @@
   let latestEntries = [];
   let pending = null;
 
+  function askRevoked(jti) {
+    return new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage({ type: "isRevoked", jti }, (resp) => {
+          if (chrome.runtime.lastError) resolve(false); // fail-open
+          else resolve(!!(resp && resp.revoked));
+        });
+      } catch (e) { resolve(false); }
+    });
+  }
   async function isActivated() {
     try {
       const c = await chrome.storage.local.get(["licenseCode"]);
-      return c.licenseCode ? await self.WPLicense.verify(c.licenseCode) : false;
+      if (!c.licenseCode) return false;
+      if (!(await self.WPLicense.verify(c.licenseCode))) return false; // bad sig or expired
+      const inf = await self.WPLicense.info(c.licenseCode);
+      if (inf && inf.jti && (await askRevoked(inf.jti))) return false; // revoked by owner
+      return true;
     } catch (e) { return false; }
   }
 
