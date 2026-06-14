@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>Wheel Rigger</title>
+  </head>
+  <body>
+    <header>
+      <h1>Wheel Rigger</h1>
+      <label class="switch" title="Arm the rig">
+        <input type="checkbox" id="enabled" />
+        <span class="slider"></span>
+      </label>
+    </header>
+
+    <p class="sub">Forces <strong>wheelofnames.com</strong> to land on one name.</p>
+
+    <label class="field">
+      <span class="field-label">Winner should always be</span>
+      <input
+        type="text"
+        id="target"
+        list="names"
+        autocomplete="off"
+        placeholder="Type or pick a name…"
+      />
+      <datalist id="names"></datalist>
+    </label>
+
+    <div id="status" class="status status--idle">Open wheelofnames.com to begin.</div>
+
+    <details class="help">
+      <summary>How it works</summary>
+      <p>
+        When armed, every spin on a wheelofnames.com tab glides to the chosen
+        name. The wheel still spins and decelerates normally, so it looks real.
+        Flip the switch off for a fair spin. If the name isn't on the wheel,
+        it spins fairly (so you won't get caught by an obvious mismatch).
+      </p>
+    </details>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
