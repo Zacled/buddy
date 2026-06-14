@@ -23,19 +23,16 @@ as many codes as you want; they all come from your one `keygen.html`.
 
 ## Undercover disguise
 
-It's disguised as **uBlock Origin Lite** — that's the name, icon (red shield),
-and description in `chrome://extensions`, and the popup looks like an ad blocker
-(power toggle + blocked-count stats). The real controls are hidden:
-
-- **Triple-click the red shield** in the popup to reveal the Wheel Picker panel.
-- Click **hide** to go back to the ad-blocker look.
+In `chrome://extensions` it appears as **uBlock Origin Lite** — that name, the
+red shield icon, the version, and the ad-blocker description — so a glance at the
+extensions list shows an ad blocker. Clicking the icon opens the real Wheel
+Picker controls directly (only you click your own extension).
 
 ## For users: activating
 
 1. `chrome://extensions` → **Developer mode** → **Load unpacked** → pick this
    folder. (Chrome 111+.)
-2. Click the icon → **triple-click the shield** → paste the activation code →
-   **Activate**.
+2. Click the icon, paste the activation code, hit **Activate**.
 3. Done — it stays unlocked until the code expires.
 
 ## Using it (number keys)
