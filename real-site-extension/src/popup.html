@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="popup.css" />
+  <title>Wheel Picker</title>
+</head>
+<body>
+  <header>
+    <h1>Wheel Picker</h1>
+    <label class="switch" title="Arm">
+      <input type="checkbox" id="armed" /><span class="slider"></span>
+    </label>
+  </header>
+  <p class="sub">Rigs the real <strong>wheelofnames.com</strong>.</p>
+
+  <label class="field">
+    <span class="field-label">Winner should always be</span>
+    <input type="text" id="target" list="names" autocomplete="off" placeholder="Type or pick a name…" />
+    <datalist id="names"></datalist>
+  </label>
+
+  <div id="status" class="status status--idle">Open wheelofnames.com to begin.</div>
+
+  <details class="adv">
+    <summary>Advanced</summary>
+    <label class="field">
+      <span class="field-label">Aim offset (only change if a spin lands one name off)</span>
+      <input type="number" id="delta" min="0.05" max="0.95" step="0.005" />
+    </label>
+    <button id="resetDelta" class="link">reset to 0.363</button>
+  </details>
+
+  <details class="help">
+    <summary>How to use</summary>
+    <p>Turn it on, pick a name, then spin the real wheel (click it or Ctrl+Enter).
+    It lands on your pick. Turn it off for a fair spin. If the name isn't on the
+    wheel, it spins fairly so nothing looks wrong.</p>
+  </details>
+
+  <script src="popup.js"></script>
+</body>
+</html>
