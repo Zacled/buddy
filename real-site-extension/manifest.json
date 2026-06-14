@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Wheel Picker",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "description": "Quietly decides the winner on the real wheelofnames.com.",
   "minimum_chrome_version": "111",
   "permissions": ["storage"],
@@ -22,7 +22,7 @@
     },
     {
       "matches": ["*://wheelofnames.com/*", "*://*.wheelofnames.com/*"],
-      "js": ["src/bridge.js"],
+      "js": ["src/license.js", "src/bridge.js"],
       "world": "ISOLATED",
       "run_at": "document_idle"
     }

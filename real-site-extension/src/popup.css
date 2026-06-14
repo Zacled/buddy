@@ -26,3 +26,6 @@ input:checked + .slider::before { transform: translateX(20px); }
 .link { background: none; border: none; color: #5a9bff; cursor: pointer; font-size: 12px; padding: 0; }
 .keys { font-size: 13px; line-height: 1.9; margin-bottom: 12px; color: var(--text); }
 .k { display: inline-block; min-width: 18px; text-align: center; background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; font-weight: 700; font-size: 12px; }
+.active-info { font-size: 11.5px; color: #86efac; margin-bottom: 10px; }
+.btn { width: 100%; background: var(--accent); color: #fff; border: none; font: inherit; font-weight: 600; padding: 10px; border-radius: 8px; cursor: pointer; margin-bottom: 12px; }
+.btn:disabled { opacity: .6; cursor: default; }

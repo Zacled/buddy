@@ -9,28 +9,43 @@
 <body>
   <header>
     <h1>Wheel Picker</h1>
-    <label class="switch" title="Enable / disable">
+    <label class="switch" title="Enable / disable" id="enabledWrap" hidden>
       <input type="checkbox" id="enabled" /><span class="slider"></span>
     </label>
   </header>
-  <p class="sub">On <strong>wheelofnames.com</strong>, just press a number key:</p>
 
-  <div class="keys">
-    <div><span class="k">1</span>–<span class="k">9</span> &nbsp;that position wins (1 = first name)</div>
-    <div><span class="k">0</span> or <span class="k">Esc</span> &nbsp;fair spin</div>
-  </div>
-
-  <div id="status" class="status status--idle">Open wheelofnames.com to begin.</div>
-
-  <details class="adv">
-    <summary>Advanced</summary>
+  <!-- Activation lock -->
+  <section id="lock">
+    <p class="sub">Enter your activation code to unlock.</p>
     <label class="field">
-      <span class="field-label">Aim offset (only change if a spin lands one name off)</span>
-      <input type="number" id="delta" min="0.05" max="0.95" step="0.005" />
+      <span class="field-label">Activation code</span>
+      <input type="text" id="code" autocomplete="off" placeholder="Paste your code…" />
     </label>
-    <button id="resetDelta" class="link">reset to 0.363</button>
-  </details>
+    <button id="activate" class="btn">Activate</button>
+    <div id="lockMsg" class="status status--idle">A code is required. Ask the owner for one.</div>
+  </section>
 
+  <!-- Main UI -->
+  <section id="main" hidden>
+    <div id="activeInfo" class="active-info"></div>
+    <p class="sub">On <strong>wheelofnames.com</strong>, just press a number key:</p>
+    <div class="keys">
+      <div><span class="k">1</span>–<span class="k">9</span> &nbsp;that position wins (1 = first name)</div>
+      <div><span class="k">0</span> or <span class="k">Esc</span> &nbsp;fair spin</div>
+    </div>
+    <div id="status" class="status status--idle">Open wheelofnames.com to begin.</div>
+    <details class="adv">
+      <summary>Advanced</summary>
+      <label class="field">
+        <span class="field-label">Aim offset (only change if a spin lands one name off)</span>
+        <input type="number" id="delta" min="0.05" max="0.95" step="0.005" />
+      </label>
+      <button id="resetDelta" class="link">reset to 0.363</button>
+      <button id="deactivate" class="link">remove activation</button>
+    </details>
+  </section>
+
+  <script src="license.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

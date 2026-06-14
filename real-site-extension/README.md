@@ -1,52 +1,60 @@
 # Wheel Picker — real-site extension
 
 Rigs the **actual wheelofnames.com**. It looks 100% real because it *is* the
-real site — the extension just steers the outcome behind the scenes.
+real site. Locked behind an **activation code** that you mint and control.
 
-## Use it (number keys)
+## For you (the owner): minting codes
 
-On the wheelofnames.com page, just press a number key — no panel needed:
+`keygen.html` is your private code generator — **keep it secret**. Anyone who
+has that file can mint working codes, so never share it or put it in a public
+repo.
+
+1. Open `keygen.html` in a browser.
+2. Type a label (just for your records, e.g. a friend's name).
+3. Choose how long it works — 1 hour, 1 day, 7/30 days, 1 year, or never.
+4. Click **Generate code**, **Copy**, and send that code to the person.
+
+The duration is baked into the code and signed, so it can't be edited — when it
+runs out, that person's extension locks itself automatically. You can hand out
+as many codes as you want; they all come from your one `keygen.html`.
+
+> The extension only contains the matching **public** key, so recipients can't
+> forge codes or unlock it without one from you.
+
+## For users: activating
+
+1. `chrome://extensions` → **Developer mode** → **Load unpacked** → pick this
+   `real-site-extension` folder. (Chrome 111+.)
+2. Click the icon, paste the activation code, hit **Activate**.
+3. Done — it stays unlocked until the code expires.
+
+## Using it (number keys)
+
+On the wheelofnames.com page, press a number key — no panel needed:
 
 - **1–9** → that position wins (1 = the first name in the list, 2 = second, …)
-- **0** or **Esc** → fair spin (rig off)
+- **0** or **Esc** → fair spin
 
-Then spin the wheel normally (click it or **Ctrl+Enter**) and it lands on the
-position you picked. A tiny confirmation flashes in the bottom-left corner when
-you press a key, and the toolbar icon shows the armed number (only you see it).
+Then spin normally (click the wheel or **Ctrl+Enter**). It lands on a *random
+spot inside* the chosen name's slice, so it stops in a different place each time
+while always landing on the right name. The toolbar icon shows the armed number
+(only you see it).
 
-Tip: press **0** for a fair spin or two first to sell it, then quietly press the
-number for the friend you want to win.
+## How the rig works
 
-## Install / update
-
-1. `chrome://extensions` → turn on **Developer mode**.
-2. **Load unpacked** → select this `real-site-extension` folder.
-   (Updating? Replace the folder, then click the **reload ⟳** icon on the card.)
-3. Pin the icon. (Requires Chrome 111+.)
-
-## How it works
-
-The current wheelofnames.com decides the winner in your browser from
-`crypto.getRandomValues`. We measured how that value maps to the winning slice:
-
-```
-winning index = round( N * ((u + 0.363) mod 1) ) mod N
-```
-
-where `N` is the number of names and `u` is the value the site reads from the
-RNG. So to land position `t` the extension forces `u = (t/N − 0.363) mod 1`,
-only at the moment you spin. Off, the real RNG is untouched, so spins are
-genuinely fair.
-
-The `0.363` offset (from the wheel's deceleration) is safe for lists up to ~16
-names. If a big list ever lands one name off, nudge **Advanced → Aim offset** by
-±0.02.
+wheelofnames.com decides the winner in your browser from `crypto.getRandomValues`.
+The winning slice is `round( N * ((u + 0.363) mod 1) ) mod N`, so to land
+position `t` the extension forces the RNG to `u = (t/N − 0.363) mod 1` (plus a
+small random in-slice offset) — only at the moment you spin. Off / not activated,
+the real RNG is untouched, so spins are genuinely fair.
 
 ## Files
 
-| File | World | Role |
-| --- | --- | --- |
-| `src/main-world.js` | page | Number-key targeting + forces the RNG on spin |
-| `src/bridge.js` | content | Config sync, on-screen confirmation, name lookup |
-| `src/sw.js` | worker | Toolbar badge with the armed position number |
-| `src/popup.*` | popup | On/off, status, aim-offset safety valve |
+| File | Role |
+| --- | --- |
+| `src/main-world.js` | Number-key targeting + forces the RNG on spin |
+| `src/bridge.js` | Config sync + activation gating |
+| `src/license.js` | Verifies activation codes (public key) |
+| `src/sw.js` | Toolbar badge with the armed position |
+| `src/popup.*` | Activation screen, on/off, status, aim-offset |
+| `keygen.html` | **(owner only, not in this folder)** mints codes |

@@ -13,7 +13,7 @@
   "use strict";
 
   const TAG = "__wnrig";
-  const state = { enabled: true, forceIndex: -1, delta: 0.363 };
+  const state = { activated: false, enabled: true, forceIndex: -1, delta: 0.363 };
   let forceThisSpin = false;
   let curK = 0;
   let mathUntil = 0;
@@ -63,18 +63,18 @@
 
   try {
     crypto.getRandomValues = function (a) {
-      if (state.enabled && forceThisSpin) return fillK(a);
+      if (state.activated && state.enabled && forceThisSpin) return fillK(a);
       return realGet ? realGet(a) : a;
     };
   } catch (e) {}
 
   Math.random = function () {
-    if (state.enabled && forceThisSpin && performance.now() < mathUntil) return curK;
+    if (state.activated && state.enabled && forceThisSpin && performance.now() < mathUntil) return curK;
     return realRandom();
   };
 
   function onSpin() {
-    if (!state.enabled || state.forceIndex < 0) { forceThisSpin = false; return; }
+    if (!state.activated || !state.enabled || state.forceIndex < 0) { forceThisSpin = false; return; }
     const entries = readEntries();
     const N = entries.length;
     const t = state.forceIndex;
@@ -104,6 +104,7 @@
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { onSpin(); return; } // spin shortcut
+    if (!state.activated) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (inEditable()) return;
     if (e.key >= "1" && e.key <= "9") { state.forceIndex = e.key.charCodeAt(0) - 49; announce(); }
@@ -119,6 +120,7 @@
     const d = e.data;
     if (!d || d[TAG] !== true || d.dir !== "to-main") return;
     if (d.type === "config") {
+      if (typeof d.activated === "boolean") state.activated = d.activated;
       if (typeof d.enabled === "boolean") state.enabled = d.enabled;
       if (typeof d.forceIndex === "number") state.forceIndex = d.forceIndex;
       if (typeof d.delta === "number" && d.delta > 0 && d.delta < 1) state.delta = d.delta;
