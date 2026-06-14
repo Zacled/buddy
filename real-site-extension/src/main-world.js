@@ -39,7 +39,15 @@
 
   function computeK(N, t) {
     if (!N) return 0;
-    return (((t / N - state.delta) % 1) + 1) % 1;
+    // Aim for a RANDOM spot inside the target slice, not its exact center, so
+    // the wheel stops in a different place each time. The slice spans ±(0.5/N)
+    // turns around t/N; we keep a safety margin (covers the small offset error)
+    // so it still always lands on the right name.
+    const half = 0.5 / N;
+    const jitter = Math.max(0, Math.min(half - 0.04, 0.7 * half));
+    const offset = (realRandom() * 2 - 1) * jitter;
+    const phi = t / N + offset;
+    return (((phi - state.delta) % 1) + 1) % 1;
   }
 
   function fillK(a) {
