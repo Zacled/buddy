@@ -9,17 +9,16 @@
 <body>
   <header>
     <h1>Wheel Picker</h1>
-    <label class="switch" title="Arm">
-      <input type="checkbox" id="armed" /><span class="slider"></span>
+    <label class="switch" title="Enable / disable">
+      <input type="checkbox" id="enabled" /><span class="slider"></span>
     </label>
   </header>
-  <p class="sub">Rigs the real <strong>wheelofnames.com</strong>.</p>
+  <p class="sub">On <strong>wheelofnames.com</strong>, just press a number key:</p>
 
-  <label class="field">
-    <span class="field-label">Winner should always be</span>
-    <input type="text" id="target" list="names" autocomplete="off" placeholder="Type or pick a name…" />
-    <datalist id="names"></datalist>
-  </label>
+  <div class="keys">
+    <div><span class="k">1</span>–<span class="k">9</span> &nbsp;that position wins (1 = first name)</div>
+    <div><span class="k">0</span> or <span class="k">Esc</span> &nbsp;fair spin</div>
+  </div>
 
   <div id="status" class="status status--idle">Open wheelofnames.com to begin.</div>
 
@@ -30,13 +29,6 @@
       <input type="number" id="delta" min="0.05" max="0.95" step="0.005" />
     </label>
     <button id="resetDelta" class="link">reset to 0.363</button>
-  </details>
-
-  <details class="help">
-    <summary>How to use</summary>
-    <p>Turn it on, pick a name, then spin the real wheel (click it or Ctrl+Enter).
-    It lands on your pick. Turn it off for a fair spin. If the name isn't on the
-    wheel, it spins fairly so nothing looks wrong.</p>
   </details>
 
   <script src="popup.js"></script>

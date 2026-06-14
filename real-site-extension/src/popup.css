@@ -24,3 +24,5 @@ input:checked + .slider::before { transform: translateX(20px); }
 .adv .field { margin-top: 10px; }
 .help p { margin: 8px 0 0; line-height: 1.5; }
 .link { background: none; border: none; color: #5a9bff; cursor: pointer; font-size: 12px; padding: 0; }
+.keys { font-size: 13px; line-height: 1.9; margin-bottom: 12px; color: var(--text); }
+.k { display: inline-block; min-width: 18px; text-align: center; background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; font-weight: 700; font-size: 12px; }

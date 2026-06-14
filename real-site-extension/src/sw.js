@@ -1,16 +1,16 @@
-/* sw.js — toolbar badge: green ON when armed with a target (only you see it). */
+/* sw.js — toolbar badge shows the armed position number (only you see it). */
 function refreshBadge() {
-  chrome.storage.local.get(["armed", "target"], (c) => {
-    const on = !!c.armed && !!(c.target && c.target.trim());
-    chrome.action.setBadgeText({ text: on ? "ON" : "" });
+  chrome.storage.local.get(["enabled", "forceIndex"], (c) => {
+    const armed = c.enabled !== false && typeof c.forceIndex === "number" && c.forceIndex >= 0;
+    chrome.action.setBadgeText({ text: armed ? String(c.forceIndex + 1) : "" });
     chrome.action.setBadgeBackgroundColor({ color: "#16a34a" });
   });
 }
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.get(["armed", "target", "delta"], (c) => {
+  chrome.storage.local.get(["enabled", "forceIndex", "delta"], (c) => {
     const seed = {};
-    if (c.armed === undefined) seed.armed = false;
-    if (c.target === undefined) seed.target = "";
+    if (c.enabled === undefined) seed.enabled = true;
+    if (c.forceIndex === undefined) seed.forceIndex = -1;
     if (c.delta === undefined) seed.delta = 0.363;
     if (Object.keys(seed).length) chrome.storage.local.set(seed);
     refreshBadge();
@@ -18,5 +18,5 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 chrome.runtime.onStartup.addListener(refreshBadge);
 chrome.storage.onChanged.addListener((ch, area) => {
-  if (area === "local" && (ch.armed || ch.target)) refreshBadge();
+  if (area === "local" && (ch.enabled || ch.forceIndex)) refreshBadge();
 });

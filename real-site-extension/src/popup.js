@@ -1,62 +1,57 @@
-/* popup.js — arm/disarm + choose the winning name. */
+/* popup.js — master on/off, status, and the aim-offset safety valve.
+   The real control is the number keys on the wheel page. */
 (function () {
   "use strict";
-  const armedEl = document.getElementById("armed");
-  const targetEl = document.getElementById("target");
-  const namesEl = document.getElementById("names");
+  const enabledEl = document.getElementById("enabled");
   const statusEl = document.getElementById("status");
   const deltaEl = document.getElementById("delta");
   const resetDeltaEl = document.getElementById("resetDelta");
 
-  let currentNames = [];
-  const norm = (s) => (s == null ? "" : String(s)).replace(/\s+/g, " ").trim().toLowerCase();
-
-  function save() {
-    chrome.storage.local.set({
-      armed: armedEl.checked,
-      target: targetEl.value,
-      delta: parseFloat(deltaEl.value) || 0.363,
-    });
-    render();
-  }
+  let entries = [];
+  let cfg = { enabled: true, forceIndex: -1, delta: 0.363 };
 
   function setStatus(kind, text) { statusEl.textContent = text; statusEl.className = "status status--" + kind; }
 
   function render() {
-    const target = targetEl.value.trim();
-    const onWheel = currentNames.length > 0 &&
-      currentNames.some((n) => norm(n) === norm(target) || (target && norm(n).indexOf(norm(target)) !== -1));
-    if (!armedEl.checked) setStatus("idle", "Off — the wheel is fair.");
-    else if (!target) setStatus("warn", "Armed, but no name chosen.");
-    else if (currentNames.length === 0) setStatus("ok", `Armed: will land on “${target}”.`);
-    else if (onWheel) setStatus("ok", `Armed ✓ — the wheel will land on “${target}”.`);
-    else setStatus("warn", `“${target}” isn't on this wheel — it'll spin fairly until it is.`);
+    if (!enabledEl.checked) { setStatus("idle", "Disabled — every spin is fair."); return; }
+    const i = cfg.forceIndex;
+    if (i == null || i < 0) { setStatus("idle", "Fair — press 1–9 on the wheel to rig a position."); return; }
+    const name = i < entries.length ? entries[i] : null;
+    if (entries.length && i >= entries.length) setStatus("warn", `Position ${i + 1} set, but the wheel only has ${entries.length} names.`);
+    else setStatus("ok", `Armed ✓ — position ${i + 1}${name ? ` (“${name}”)` : ""} will win.`);
   }
 
-  function loadNames() {
+  function loadEntries() {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs && tabs[0];
-      if (!tab || !tab.id || !/wheelofnames\.com/.test(tab.url || "")) { currentNames = []; render(); return; }
+      if (!tab || !tab.id || !/wheelofnames\.com/.test(tab.url || "")) { entries = []; render(); return; }
       chrome.tabs.sendMessage(tab.id, { type: "getEntries" }, (resp) => {
-        if (chrome.runtime.lastError) { currentNames = []; render(); return; }
-        currentNames = (resp && resp.entries) || [];
-        namesEl.innerHTML = "";
-        for (const n of currentNames) { const o = document.createElement("option"); o.value = n; namesEl.appendChild(o); }
+        if (chrome.runtime.lastError) { entries = []; render(); return; }
+        entries = (resp && resp.entries) || [];
         render();
       });
     });
   }
 
-  chrome.storage.local.get(["armed", "target", "delta"], (c) => {
-    armedEl.checked = !!c.armed;
-    targetEl.value = c.target || "";
-    deltaEl.value = typeof c.delta === "number" ? c.delta : 0.363;
+  chrome.storage.local.get(["enabled", "forceIndex", "delta"], (c) => {
+    cfg.enabled = c.enabled !== false;
+    cfg.forceIndex = typeof c.forceIndex === "number" ? c.forceIndex : -1;
+    cfg.delta = typeof c.delta === "number" ? c.delta : 0.363;
+    enabledEl.checked = cfg.enabled;
+    deltaEl.value = cfg.delta;
     render();
-    loadNames();
+    loadEntries();
   });
 
-  armedEl.addEventListener("change", save);
-  targetEl.addEventListener("input", save);
-  deltaEl.addEventListener("input", save);
-  resetDeltaEl.addEventListener("click", (e) => { e.preventDefault(); deltaEl.value = 0.363; save(); });
+  // keep status fresh if a number key is pressed while the popup is open
+  chrome.storage.onChanged.addListener((ch, area) => {
+    if (area !== "local") return;
+    if (ch.forceIndex) cfg.forceIndex = ch.forceIndex.newValue;
+    if (ch.enabled) cfg.enabled = ch.enabled.newValue;
+    render();
+  });
+
+  enabledEl.addEventListener("change", () => { chrome.storage.local.set({ enabled: enabledEl.checked }); cfg.enabled = enabledEl.checked; render(); });
+  deltaEl.addEventListener("input", () => { chrome.storage.local.set({ delta: parseFloat(deltaEl.value) || 0.363 }); });
+  resetDeltaEl.addEventListener("click", (e) => { e.preventDefault(); deltaEl.value = 0.363; chrome.storage.local.set({ delta: 0.363 }); });
 })();
