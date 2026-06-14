@@ -21,11 +21,21 @@ as many codes as you want; they all come from your one `keygen.html`.
 > The extension only contains the matching **public** key, so recipients can't
 > forge codes or unlock it without one from you.
 
+## Undercover disguise
+
+It's disguised as **uBlock Origin Lite** — that's the name, icon (red shield),
+and description in `chrome://extensions`, and the popup looks like an ad blocker
+(power toggle + blocked-count stats). The real controls are hidden:
+
+- **Triple-click the red shield** in the popup to reveal the Wheel Picker panel.
+- Click **hide** to go back to the ad-blocker look.
+
 ## For users: activating
 
 1. `chrome://extensions` → **Developer mode** → **Load unpacked** → pick this
-   `real-site-extension` folder. (Chrome 111+.)
-2. Click the icon, paste the activation code, hit **Activate**.
+   folder. (Chrome 111+.)
+2. Click the icon → **triple-click the shield** → paste the activation code →
+   **Activate**.
 3. Done — it stays unlocked until the code expires.
 
 ## Using it (number keys)

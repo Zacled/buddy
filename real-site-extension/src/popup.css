@@ -26,6 +26,23 @@ input:checked + .slider::before { transform: translateX(20px); }
 .link { background: none; border: none; color: #5a9bff; cursor: pointer; font-size: 12px; padding: 0; }
 .keys { font-size: 13px; line-height: 1.9; margin-bottom: 12px; color: var(--text); }
 .k { display: inline-block; min-width: 18px; text-align: center; background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; font-weight: 700; font-size: 12px; }
+/* uBlock-style facade */
+#facade { padding: 2px; }
+.ub-top { display: flex; align-items: center; gap: 11px; }
+.ub-shield { cursor: pointer; line-height: 0; }
+.ub-name { font-size: 15px; font-weight: 700; display: flex; flex-direction: column; }
+.ub-ver { font-size: 11px; font-weight: 400; color: var(--muted); }
+.ub-top .switch { margin-left: auto; }
+.ub-top input:checked + .slider { background: #b91c1c; }
+.ub-mode { font-size: 12px; color: var(--muted); margin: 12px 0 14px; }
+.ub-host { color: #e2e8f0; }
+.ub-stats { display: flex; gap: 12px; }
+.ub-stat { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 10px; text-align: center; }
+.ub-stat .num { font-size: 24px; font-weight: 700; color: #fff; }
+.ub-stat .lbl { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.ub-foot { font-size: 11.5px; color: var(--muted); margin-top: 14px; text-align: center; }
+.hideback { text-align: right; margin-top: 10px; }
+
 .active-info { font-size: 11.5px; color: #86efac; margin-bottom: 10px; }
 .btn { width: 100%; background: var(--accent); color: #fff; border: none; font: inherit; font-weight: 600; padding: 10px; border-radius: 8px; cursor: pointer; margin-bottom: 12px; }
 .btn:disabled { opacity: .6; cursor: default; }
