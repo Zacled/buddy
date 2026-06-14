@@ -39,7 +39,10 @@
 
   main { display: flex; height: calc(100% - 96px); padding: 0 14px; }
   .wheel-wrap { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; position: relative; min-width: 0; }
-  #wheel { max-width: 92%; max-height: 96%; cursor: pointer; }
+  #wheel { max-width: 100%; max-height: 100%; cursor: pointer; }
+  .edit-btn { position: absolute; left: 14px; top: 14px; width: 44px; height: 44px; border-radius: 50%; background: #3369E8; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.4); z-index: 2; }
+  .edit-btn svg { width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 2; }
+  .edit-btn:hover { background: #2a59cf; }
 
   /* right column (controls float on the gradient, like the real site) */
   .side { width: 460px; flex: 0 0 460px; position: relative; padding: 8px 24px 8px 0; display: flex; flex-direction: column; }
@@ -113,7 +116,7 @@
   <header>
     <div class="brand"><div class="logo" id="logo"></div><span>wheelofnames.com</span></div>
     <nav>
-      <a><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg><span class="lbl">Customize</span></a>
+      <a><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.9 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.2 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4c0-4.4-4-8.1-9-8.1z"/><circle cx="7.5" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="10" cy="7.8" r="1.1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7.8" r="1.1" fill="currentColor" stroke="none"/></svg><span class="lbl">Customize</span></a>
       <a><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span class="lbl">New</span></a>
       <a><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg><span class="lbl">Open</span></a>
       <a><svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h7V3"/><rect x="8" y="13" width="8" height="5"/></svg><span class="lbl">Save</span></a>
@@ -126,7 +129,10 @@
   </header>
 
   <main>
-    <div class="wheel-wrap"><canvas id="wheel" width="760" height="760"></canvas></div>
+    <div class="wheel-wrap">
+      <div class="edit-btn" id="editBtn" title="Edit names"><svg viewBox="0 0 24 24"><path d="M4 20l4-1L18 9l-3-3L5 16l-1 4z"/><path d="M14 6l3 3"/></svg></div>
+      <canvas id="wheel" width="760" height="760"></canvas>
+    </div>
     <aside class="side">
       <div class="collapse" id="logo2">&#10095;</div>
       <div class="tabs">
@@ -199,7 +205,7 @@
   let cssW = 700;
 
   function sizeCanvas() {
-    const cssSize = Math.max(260, Math.min(window.innerHeight*0.96, window.innerWidth-520));
+    const cssSize = Math.max(260, Math.min(window.innerHeight*0.82, window.innerWidth-560, 720));
     const dpr = window.devicePixelRatio || 1;
     canvas.style.width = canvas.style.height = cssSize + "px";
     canvas.width = canvas.height = Math.round(cssSize*dpr);
@@ -244,7 +250,7 @@
       g.addColorStop(0,"rgba(255,255,255,.10)"); g.addColorStop(.5,"rgba(255,255,255,0)"); g.addColorStop(1,"rgba(0,0,0,.10)");
       ctx.beginPath(); ctx.arc(cx,cy,R,0,TWO_PI); ctx.fillStyle=g; ctx.fill(); ctx.restore();
       // labels
-      const fs = Math.max(13, Math.min(34, R*0.9/Math.max(5,n)+10, s*R*0.6));
+      const fs = Math.max(14, Math.min(R*0.17, s*R*0.42));
       ctx.textAlign="right"; ctx.textBaseline="middle";
       ctx.font = `600 ${fs}px Quicksand, Arial, sans-serif`;
       for (let i=0;i<n;i++){
@@ -268,9 +274,9 @@
     ctx.fillStyle="#3f74de"; ctx.fill();
     ctx.lineWidth=2; ctx.strokeStyle="#2a55c0"; ctx.stroke(); ctx.restore();
     // idle prompt
-    if (!spinning && n) {
-      drawArcText("Click to spin", cx, cy, R*0.7, -Math.PI/2, +1, +Math.PI/2, Math.round(R*0.13));
-      drawArcText("or press ctrl+enter", cx, cy, R*0.7, +Math.PI/2, -1, -Math.PI/2, Math.round(R*0.085));
+    if (!spinning && !hasSpun && n) {
+      drawArcText("Click to spin", cx, cy, R*0.72, -Math.PI/2, +1, +Math.PI/2, Math.round(R*0.135));
+      drawArcText("or press ctrl+enter", cx, cy, R*0.72, +Math.PI/2, -1, -Math.PI/2, Math.round(R*0.088));
     }
   }
 
@@ -311,15 +317,18 @@
     spinning = true; hasSpun = true; resumeAudio();
     const t = chooseTargetIndex();
     const startRot = ((rot%TWO_PI)+TWO_PI)%TWO_PI;
-    const turns = 6 + Math.floor(Math.random()*3);
+    const turns = 7 + Math.floor(Math.random()*3);
     let delta = ((rotationForIndex(t)-startRot)%TWO_PI+TWO_PI)%TWO_PI + turns*TWO_PI;
     const finalRot = startRot+delta;
-    const duration = 6200 + Math.random()*1600;
+    const duration = 7400 + Math.random()*1800;
     const t0 = performance.now();
     let lastSeg = winnerIndex(startRot);
+    // Authentic feel: brief acceleration, then a long exponential decay tail.
+    const FA = 0.1, KK = 5, TOT = FA/2 + (1 - Math.exp(-KK*(1-FA)))/KK;
+    const ease = (x) => (x < FA ? (x*x)/(2*FA) : FA/2 + (1 - Math.exp(-KK*(x-FA)))/KK) / TOT;
     function frame(now){
       const x = Math.min(1,(now-t0)/duration);
-      rot = startRot + delta*(1-Math.pow(1-x,3));
+      rot = startRot + delta*ease(x);
       drawWheel();
       const cur=winnerIndex(rot);
       if (cur!==lastSeg){ tick(); lastSeg=cur; }
@@ -347,7 +356,7 @@
   // audio
   let actx=null;
   function resumeAudio(){ try{ if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==="suspended")actx.resume(); }catch{} }
-  function tick(){ if(muted||!actx)return; try{ const o=actx.createOscillator(),g=actx.createGain(); o.type="square"; o.frequency.value=900; g.gain.setValueAtTime(0.0001,actx.currentTime); g.gain.exponentialRampToValueAtTime(0.05,actx.currentTime+0.002); g.gain.exponentialRampToValueAtTime(0.0001,actx.currentTime+0.05); o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime+0.06);}catch{} }
+  function tick(){ if(muted||!actx)return; try{ const o=actx.createOscillator(),g=actx.createGain(); o.type="sine"; o.frequency.value=620; const n=actx.currentTime; g.gain.setValueAtTime(0.0001,n); g.gain.exponentialRampToValueAtTime(0.028,n+0.001); g.gain.exponentialRampToValueAtTime(0.0001,n+0.035); o.connect(g); g.connect(actx.destination); o.start(); o.stop(n+0.045);}catch{} }
   function ding(){ if(muted||!actx)return; try{ [523.25,659.25,783.99].forEach((f,i)=>{ const o=actx.createOscillator(),g=actx.createGain(); o.type="triangle"; o.frequency.value=f; const s=actx.currentTime+i*0.07; g.gain.setValueAtTime(0.0001,s); g.gain.exponentialRampToValueAtTime(0.18,s+0.02); g.gain.exponentialRampToValueAtTime(0.0001,s+0.5); o.connect(g); g.connect(actx.destination); o.start(s); o.stop(s+0.55); }); }catch{} }
   const muteEl=document.getElementById("mute");
   function renderMute(){ muteEl.textContent=muted?"🔇":"🔊"; }
@@ -388,6 +397,8 @@
   canvas.addEventListener("click",spin);
   window.addEventListener("resize",()=>{ sizeCanvas(); sizeConfetti(); });
 
+  document.getElementById("editBtn").onclick = () => namesEl.focus();
+  rot = rotationForIndex(0);
   renderMute(); persistRig(); syncNamesUI(); sizeCanvas(); sizeConfetti(); renderRig();
 })();
 </script>
