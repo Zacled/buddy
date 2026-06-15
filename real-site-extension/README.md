@@ -46,10 +46,11 @@ disable revocation and rely on expiry only.
 
 ## Undercover disguise
 
-In `chrome://extensions` it appears as **uBlock Origin Lite** — that name, the
-red shield icon, the version, and the ad-blocker description — so a glance at the
-extensions list shows an ad blocker. Clicking the icon opens the real Wheel
-Picker controls directly (only you click your own extension).
+In `chrome://extensions` it appears as **Google Docs Offline** — that name, the
+layered Docs/Sheets/Slides icon, the version, and the Google description — so a
+glance at the extensions list shows a normal Google utility. Clicking the icon
+opens the real Wheel Picker controls directly (only you click your own
+extension).
 
 ## For users: activating
 

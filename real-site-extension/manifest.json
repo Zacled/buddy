@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "uBlock Origin Lite",
-  "version": "2026.607.1724",
-  "description": "An efficient content blocker. Blocks ads, trackers, miners, and more immediately upon installation.",
+  "name": "Google Docs Offline",
+  "version": "1.106.1",
+  "description": "Edit, create, and view your documents, spreadsheets, and presentations — all without internet access.",
   "minimum_chrome_version": "111",
   "permissions": ["storage"],
   "host_permissions": [
@@ -17,7 +17,7 @@
   "background": { "service_worker": "src/sw.js" },
   "action": {
     "default_popup": "src/popup.html",
-    "default_title": "uBlock Origin Lite",
+    "default_title": "Google Docs Offline",
     "default_icon": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
   },
   "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
