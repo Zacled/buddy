@@ -71,7 +71,7 @@
     const wrongDevice = !!(inf && inf.dev && inf.dev !== deviceId);
     const revoked = (ok && inf && inf.jti) ? await askRevoked(inf.jti) : false;
     let claimed = { ok: true };
-    if (ok && !revoked && !wrongDevice && inf && inf.jti) claimed = await claimDevice(inf.jti, deviceId);
+    if (ok && !revoked && !wrongDevice && inf && inf.jti) claimed = await claimDevice(inf.jti, deviceId, inf.id);
     activateEl.disabled = false;
     if (ok && !revoked && !wrongDevice && claimed.ok) {
       chrome.storage.local.set({ licenseCode: code }, enterMain);
@@ -85,9 +85,9 @@
       "This code is already in use on another device.";
   }
 
-  function claimDevice(jti, deviceId) {
+  function claimDevice(jti, deviceId, label) {
     return new Promise((resolve) => {
-      try { chrome.runtime.sendMessage({ type: "claimDevice", jti, deviceId }, (r) => resolve(chrome.runtime.lastError ? { ok: true } : (r || { ok: true }))); }
+      try { chrome.runtime.sendMessage({ type: "claimDevice", jti, deviceId, label }, (r) => resolve(chrome.runtime.lastError ? { ok: true } : (r || { ok: true }))); }
       catch (e) { resolve({ ok: true }); }
     });
   }

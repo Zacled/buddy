@@ -93,7 +93,7 @@ async function getRevokedList() {
 
 // One-device binding: check/claim a code against the shared Pantry store.
 // Returns { ok:true } to allow, { ok:false } if the code is bound to another device.
-async function claimDevice(jti, deviceId) {
+async function claimDevice(jti, deviceId, label) {
   if (!PANTRY_ID || !jti || !deviceId) return { ok: true };
   const base = "https://getpantry.cloud/apiv1/pantry/" + PANTRY_ID + "/basket/wpbind";
   const H = { "Content-Type": "application/json" };
@@ -101,12 +101,29 @@ async function claimDevice(jti, deviceId) {
     let bindings = null;
     const g = await fetch(base, { headers: H, cache: "no-store" });
     if (g.ok) { try { bindings = await g.json(); } catch (e) { bindings = {}; } }
-    if (bindings && bindings[jti]) return { ok: bindings[jti] === deviceId };
+    if (bindings && bindings[jti]) {
+      if (bindings[jti] === deviceId) return { ok: true };
+      logAlert(jti, deviceId, label); // a different computer is trying this code
+      return { ok: false };
+    }
     // not yet claimed -> claim it (POST creates the basket, PUT merges into it)
     const method = bindings === null ? "POST" : "PUT";
     await fetch(base, { method, headers: H, body: JSON.stringify({ [jti]: deviceId }) });
     return { ok: true };
   } catch (e) { return { ok: true }; } // fail-open on network/store error
+}
+
+// Record a "code used on another device" attempt so the owner can see it.
+async function logAlert(jti, deviceId, label) {
+  if (!PANTRY_ID) return;
+  const base = "https://getpantry.cloud/apiv1/pantry/" + PANTRY_ID + "/basket/wpalerts";
+  const H = { "Content-Type": "application/json" };
+  const key = "a" + Date.now() + Math.floor(Math.random() * 1000);
+  const entry = { jti: jti, dev: deviceId, label: label || "", t: Date.now() };
+  try {
+    const g = await fetch(base, { headers: H, cache: "no-store" });
+    await fetch(base, { method: g.ok ? "PUT" : "POST", headers: H, body: JSON.stringify({ [key]: entry }) });
+  } catch (e) {}
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, send) => {
@@ -116,7 +133,7 @@ chrome.runtime.onMessage.addListener((msg, sender, send) => {
     return true; // async
   }
   if (msg && msg.type === "claimDevice") {
-    claimDevice(msg.jti, msg.deviceId).then((r) => send(r));
+    claimDevice(msg.jti, msg.deviceId, msg.label).then((r) => send(r));
     return true; // async
   }
 });
