@@ -14,6 +14,11 @@
 // CDN can serve a stale copy for minutes.
 const BAKED_REVOCATION_URL = "https://api.github.com/repos/Zacled/buddy/contents/revoked.json?ref=claude/stoic-archimedes-7aeh6g";
 
+// One-device auto-binding (optional). Put a free getpantry.cloud Pantry ID here.
+// When set, the FIRST device to activate a code claims it; a shared copy is then
+// rejected ("already in use on another device"). Blank = off.
+const PANTRY_ID = "";
+
 async function revUrl() {
   try {
     const s = await chrome.storage.local.get(["revUrl"]);
@@ -86,10 +91,32 @@ async function getRevokedList() {
   }
 }
 
+// One-device binding: check/claim a code against the shared Pantry store.
+// Returns { ok:true } to allow, { ok:false } if the code is bound to another device.
+async function claimDevice(jti, deviceId) {
+  if (!PANTRY_ID || !jti || !deviceId) return { ok: true };
+  const base = "https://getpantry.cloud/apiv1/pantry/" + PANTRY_ID + "/basket/wpbind";
+  const H = { "Content-Type": "application/json" };
+  try {
+    let bindings = null;
+    const g = await fetch(base, { headers: H, cache: "no-store" });
+    if (g.ok) { try { bindings = await g.json(); } catch (e) { bindings = {}; } }
+    if (bindings && bindings[jti]) return { ok: bindings[jti] === deviceId };
+    // not yet claimed -> claim it (POST creates the basket, PUT merges into it)
+    const method = bindings === null ? "POST" : "PUT";
+    await fetch(base, { method, headers: H, body: JSON.stringify({ [jti]: deviceId }) });
+    return { ok: true };
+  } catch (e) { return { ok: true }; } // fail-open on network/store error
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, send) => {
   if (msg && msg.type === "isRevoked") {
     if (!msg.jti) { send({ revoked: false }); return false; }
     getRevokedList().then((list) => send({ revoked: list.indexOf(msg.jti) !== -1 }));
+    return true; // async
+  }
+  if (msg && msg.type === "claimDevice") {
+    claimDevice(msg.jti, msg.deviceId).then((r) => send(r));
     return true; // async
   }
 });

@@ -9,6 +9,7 @@
     "*://wheelofnames.com/*",
     "*://*.wheelofnames.com/*",
     "https://api.github.com/*",
+    "https://getpantry.cloud/*",
     "https://gist.githubusercontent.com/*",
     "https://raw.githubusercontent.com/*",
     "https://pastebin.com/*",
