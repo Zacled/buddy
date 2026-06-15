@@ -69,10 +69,21 @@
     else { lockMsg.className = "status status--warn"; lockMsg.textContent = "That code isn't valid. Check it and try again."; }
   }
 
+  function askRevoked(jti) {
+    return new Promise((resolve) => {
+      try { chrome.runtime.sendMessage({ type: "isRevoked", jti }, (resp) => resolve(chrome.runtime.lastError ? false : !!(resp && resp.revoked))); }
+      catch (e) { resolve(false); }
+    });
+  }
   chrome.storage.local.get(["licenseCode"], async (c) => {
     const ok = c.licenseCode ? await window.WPLicense.verify(c.licenseCode) : false;
-    if (ok) enterMain();
-    else showMain(false);
+    let revoked = false;
+    if (ok) { const inf = await window.WPLicense.info(c.licenseCode); if (inf && inf.jti) revoked = await askRevoked(inf.jti); }
+    if (ok && !revoked) enterMain();
+    else {
+      if (revoked) { lockMsg.className = "status status--warn"; lockMsg.textContent = "This code has been deactivated by the owner."; }
+      showMain(false);
+    }
   });
 
   activateEl.addEventListener("click", activate);

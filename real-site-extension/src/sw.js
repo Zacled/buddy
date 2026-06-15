@@ -43,9 +43,10 @@ chrome.storage.onChanged.addListener((ch, area) => {
 let cache = { at: 0, list: [] };
 async function getRevokedList() {
   if (!REVOCATION_URL) return [];
-  if (Date.now() - cache.at < 120000) return cache.list; // throttle to ~2 min
+  if (Date.now() - cache.at < 5000) return cache.list; // throttle to ~5s
   try {
-    const res = await fetch(REVOCATION_URL, { cache: "no-store" });
+    const bust = REVOCATION_URL + (REVOCATION_URL.indexOf("?") === -1 ? "?" : "&") + "_=" + Date.now();
+    const res = await fetch(bust, { cache: "no-store" });
     const data = await res.json();
     cache = { at: Date.now(), list: Array.isArray(data.revoked) ? data.revoked : [] };
     chrome.storage.local.set({ _revCache: cache.list, _revAt: cache.at });

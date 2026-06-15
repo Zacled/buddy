@@ -52,6 +52,7 @@
     const d = e.data;
     if (!d || d[TAG] !== true || d.dir !== "to-iso") return;
     if (d.type === "ready") push();
+    else if (d.type === "recheck") push();
     else if (d.type === "setIndex") setIndex(d.index);
     else if (d.type === "entries") {
       latestEntries = Array.isArray(d.entries) ? d.entries : [];
@@ -61,8 +62,8 @@
 
   push();
   chrome.storage.onChanged.addListener((ch, area) => { if (area === "local") push(); });
-  // re-check periodically and on focus so an expired code locks itself
-  setInterval(push, 120000);
+  // re-check often (and on focus / each spin) so a revoked or expired code locks fast
+  setInterval(() => { if (!document.hidden) push(); }, 6000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) push(); });
 
   chrome.runtime.onMessage.addListener((msg, sender, send) => {

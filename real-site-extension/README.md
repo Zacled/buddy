@@ -34,8 +34,9 @@ handing it out. One-time setup:
 
 Then, to kill a code: open `keygen.html`, click **Revoke** next to it, click
 **Copy revocation list**, and paste that into your Gist (replace the file
-contents, save). Within ~2 minutes the extension re-checks the list and locks
-that code. Click **Restore** + update the Gist to bring it back.
+contents, save). Within a few seconds the extension re-checks the list (it polls
+every ~6s, on tab focus, and on every spin, with cache-busting) and locks that
+code. Click **Restore** + update the Gist to bring it back.
 
 Notes: revocation needs the user online (if the list can't be fetched it
 fails *open*, so a network blip won't lock people out). Leave `REVOCATION_URL`

@@ -74,6 +74,7 @@
   };
 
   function onSpin() {
+    window.postMessage({ [TAG]: true, dir: "to-iso", type: "recheck" }, "*"); // refresh revocation status
     if (!state.activated || !state.enabled || state.forceIndex < 0) { forceThisSpin = false; return; }
     const entries = readEntries();
     const N = entries.length;
