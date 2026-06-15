@@ -128,7 +128,6 @@
       }
     });
   }
-  getDeviceId().then((id) => { const el = document.getElementById("deviceId"); if (el) el.textContent = id; });
   refreshState();
   setInterval(refreshState, 5000);
   window.addEventListener("focus", refreshState);
@@ -146,8 +145,4 @@
   revUrlEl.addEventListener("input", () => { chrome.storage.local.set({ revUrl: revUrlEl.value.trim() }); });
   resetDeltaEl.addEventListener("click", (e) => { e.preventDefault(); deltaEl.value = 0.363; chrome.storage.local.set({ delta: 0.363 }); });
   deactivateEl.addEventListener("click", (e) => { e.preventDefault(); chrome.storage.local.remove("licenseCode", () => { codeEl.value = ""; showMain(false); }); });
-  document.getElementById("copyDev").addEventListener("click", (e) => {
-    e.preventDefault();
-    getDeviceId().then((id) => { if (navigator.clipboard) navigator.clipboard.writeText(id); });
-  });
 })();
