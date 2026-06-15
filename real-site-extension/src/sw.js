@@ -10,7 +10,9 @@
  * Blank in both = revocation off (codes controlled only by expiry).
  * ────────────────────────────────────────────────────────────────────────────
  */
-const BAKED_REVOCATION_URL = "https://raw.githubusercontent.com/Zacled/buddy/claude/stoic-archimedes-7aeh6g/revoked.json";
+// GitHub API (not raw) — the API returns the live file immediately; the raw
+// CDN can serve a stale copy for minutes.
+const BAKED_REVOCATION_URL = "https://api.github.com/repos/Zacled/buddy/contents/revoked.json?ref=claude/stoic-archimedes-7aeh6g";
 
 async function revUrl() {
   try {
@@ -43,23 +45,44 @@ chrome.storage.onChanged.addListener((ch, area) => {
 });
 
 // ---- revocation list (fetched + cached) ----
-let cache = { at: 0, list: [] };
+let cache = { at: 0, list: [], etag: null };
+
+function parseRevoked(data) {
+  // GitHub API returns base64 content; a plain raw URL returns the JSON directly.
+  if (data && typeof data.content === "string") {
+    try { const o = JSON.parse(atob(data.content.replace(/\s/g, ""))); return Array.isArray(o.revoked) ? o.revoked : []; }
+    catch (e) { return []; }
+  }
+  if (data && Array.isArray(data.revoked)) return data.revoked;
+  return [];
+}
+
 async function getRevokedList() {
   const url = await revUrl();
   if (!url) return [];
-  if (Date.now() - cache.at < 5000) return cache.list; // throttle to ~5s
-  try {
-    const bust = url + (url.indexOf("?") === -1 ? "?" : "&") + "_=" + Date.now();
-    const res = await fetch(bust, { cache: "no-store" });
-    const data = await res.json();
-    cache = { at: Date.now(), list: Array.isArray(data.revoked) ? data.revoked : [] };
-    chrome.storage.local.set({ _revCache: cache.list, _revAt: cache.at });
-  } catch (e) {
-    // fail-open: reuse the last cached list we successfully fetched
-    const s = await chrome.storage.local.get(["_revCache"]);
-    cache = { at: cache.at || Date.now(), list: Array.isArray(s._revCache) ? s._revCache : cache.list };
+  if (Date.now() - cache.at < 8000) return cache.list; // throttle (304s are free, so this is cheap)
+  // restore etag/list across service-worker restarts so we keep getting free 304s
+  if (cache.etag == null) {
+    const s = await chrome.storage.local.get(["_revEtag", "_revCache"]);
+    if (s._revEtag) cache.etag = s._revEtag;
+    if (Array.isArray(s._revCache)) cache.list = s._revCache;
   }
-  return cache.list;
+  try {
+    const headers = { "Accept": "application/vnd.github+json" };
+    if (cache.etag) headers["If-None-Match"] = cache.etag; // 304 = unchanged, doesn't count vs rate limit
+    const res = await fetch(url, { headers, cache: "no-store" });
+    cache.at = Date.now();
+    if (res.status === 304) return cache.list;
+    if (res.ok) {
+      const tag = res.headers.get("ETag");
+      if (tag) cache.etag = tag;
+      cache.list = parseRevoked(await res.json());
+      chrome.storage.local.set({ _revCache: cache.list, _revEtag: cache.etag });
+    }
+    return cache.list;
+  } catch (e) {
+    return cache.list; // fail-open: keep last known list
+  }
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, send) => {
