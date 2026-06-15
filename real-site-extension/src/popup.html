@@ -24,7 +24,15 @@
     <div id="lockMsg" class="status status--idle">A code is required. Ask the owner for one.</div>
   </section>
 
+  <section id="warn" hidden>
+    <div class="warn-big">⚠ Warning <span id="warnNum">1</span> of 3</div>
+    <p class="warn-text">This code is registered to another computer. Sharing it isn't allowed —
+      on the <b>3rd</b> warning it's permanently deactivated.</p>
+    <button id="proceedBtn" class="btn btn-warn">Proceed</button>
+  </section>
+
   <section id="main" hidden>
+    <div id="warnBanner" class="warn-banner" hidden></div>
     <div id="activeInfo" class="active-info"></div>
     <p class="sub">On <strong>wheelofnames.com</strong>, just press a number key:</p>
     <div class="keys">

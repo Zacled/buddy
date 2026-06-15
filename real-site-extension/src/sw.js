@@ -91,38 +91,68 @@ async function getRevokedList() {
   }
 }
 
-// One-device binding: check/claim a code against the shared Pantry store.
-// Returns { ok:true } to allow, { ok:false } if the code is bound to another device.
-async function claimDevice(jti, deviceId, label) {
-  if (!PANTRY_ID || !jti || !deviceId) return { ok: true };
-  const base = "https://getpantry.cloud/apiv1/pantry/" + PANTRY_ID + "/basket/wpbind";
-  const H = { "Content-Type": "application/json" };
-  try {
-    let bindings = null;
-    const g = await fetch(base, { headers: H, cache: "no-store" });
-    if (g.ok) { try { bindings = await g.json(); } catch (e) { bindings = {}; } }
-    if (bindings && bindings[jti]) {
-      if (bindings[jti] === deviceId) return { ok: true };
-      logAlert(jti, deviceId, label); // a different computer is trying this code
-      return { ok: false };
-    }
-    // not yet claimed -> claim it (POST creates the basket, PUT merges into it)
-    const method = bindings === null ? "POST" : "PUT";
-    await fetch(base, { method, headers: H, body: JSON.stringify({ [jti]: deviceId }) });
-    return { ok: true };
-  } catch (e) { return { ok: true }; } // fail-open on network/store error
+// ---- one-device binding + 3-strike warnings (via Pantry) ----
+// Record per code:  wpbind[jti] = { dev:<boundDeviceId>, w:<warnings 0-3> }
+const PBIND = PANTRY_ID ? ("https://getpantry.cloud/apiv1/pantry/" + PANTRY_ID + "/basket/wpbind") : "";
+const PJSON = { "Content-Type": "application/json" };
+
+function recOf(bindings, jti) {
+  const e = bindings ? bindings[jti] : null;
+  if (!e) return null;
+  if (typeof e === "string") return { dev: e, w: 0 }; // migrate old format
+  return { dev: e.dev || "", w: e.w || 0 };
 }
 
-// Record a "code used on another device" attempt so the owner can see it.
-async function logAlert(jti, deviceId, label) {
+// Called at activation (a deliberate action). Fresh read; may add a warning.
+// Returns { status: "ok" | "warn" | "dead", n }.
+async function activateCheck(jti, deviceId, label) {
+  if (!PANTRY_ID || !jti || !deviceId) return { status: "ok" };
+  try {
+    let bindings = null;
+    const g = await fetch(PBIND, { headers: PJSON, cache: "no-store" });
+    if (g.ok) { try { bindings = await g.json(); } catch (e) { bindings = {}; } }
+    const rec = recOf(bindings, jti);
+    if (!rec) {
+      const method = bindings === null ? "POST" : "PUT";
+      await fetch(PBIND, { method, headers: PJSON, body: JSON.stringify({ [jti]: { dev: deviceId, w: 0 } }) });
+      return { status: "ok" };
+    }
+    if (rec.w >= 3) return { status: "dead" };
+    if (rec.dev === deviceId) return { status: "ok" };           // the bound computer
+    const newW = rec.w + 1;                                       // a different computer -> strike
+    await fetch(PBIND, { method: "PUT", headers: PJSON, body: JSON.stringify({ [jti]: { dev: rec.dev, w: newW } }) });
+    logAlert(jti, deviceId, label, newW);
+    return newW >= 3 ? { status: "dead" } : { status: "warn", n: newW };
+  } catch (e) { return { status: "ok" }; } // fail-open
+}
+
+// Periodic, throttled, never increments. Returns { state: "ok"|"warn"|"dead", n }.
+let pcache = { at: 0, bindings: null };
+async function codeStatus(jti, deviceId) {
+  if (!PANTRY_ID || !jti || !deviceId) return { state: "ok" };
+  try {
+    if (Date.now() - pcache.at > 20000) {
+      const g = await fetch(PBIND, { headers: PJSON, cache: "no-store" });
+      if (g.ok) { try { pcache.bindings = await g.json(); } catch (e) {} }
+      pcache.at = Date.now();
+    }
+    const rec = recOf(pcache.bindings, jti);
+    if (!rec) return { state: "ok" };
+    if (rec.w >= 3) return { state: "dead" };
+    if (rec.dev === deviceId) return { state: "ok" };
+    return { state: "warn", n: rec.w };
+  } catch (e) { return { state: "ok" }; }
+}
+
+// Record a "code used on another computer" attempt so the owner can see it.
+async function logAlert(jti, deviceId, label, n) {
   if (!PANTRY_ID) return;
   const base = "https://getpantry.cloud/apiv1/pantry/" + PANTRY_ID + "/basket/wpalerts";
-  const H = { "Content-Type": "application/json" };
   const key = "a" + Date.now() + Math.floor(Math.random() * 1000);
-  const entry = { jti: jti, dev: deviceId, label: label || "", t: Date.now() };
+  const entry = { jti: jti, dev: deviceId, label: label || "", w: n || 0, t: Date.now() };
   try {
-    const g = await fetch(base, { headers: H, cache: "no-store" });
-    await fetch(base, { method: g.ok ? "PUT" : "POST", headers: H, body: JSON.stringify({ [key]: entry }) });
+    const g = await fetch(base, { headers: PJSON, cache: "no-store" });
+    await fetch(base, { method: g.ok ? "PUT" : "POST", headers: PJSON, body: JSON.stringify({ [key]: entry }) });
   } catch (e) {}
 }
 
@@ -132,8 +162,12 @@ chrome.runtime.onMessage.addListener((msg, sender, send) => {
     getRevokedList().then((list) => send({ revoked: list.indexOf(msg.jti) !== -1 }));
     return true; // async
   }
-  if (msg && msg.type === "claimDevice") {
-    claimDevice(msg.jti, msg.deviceId, msg.label).then((r) => send(r));
+  if (msg && msg.type === "activateCheck") {
+    activateCheck(msg.jti, msg.deviceId, msg.label).then((r) => send(r));
+    return true; // async
+  }
+  if (msg && msg.type === "codeStatus") {
+    codeStatus(msg.jti, msg.deviceId).then((r) => send(r));
     return true; // async
   }
 });

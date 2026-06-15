@@ -1,11 +1,15 @@
-/* popup.js — opens straight to the real controls (activation gate, number-key
-   info, on/off, aim-offset). The disguise is only on the extensions listing. */
+/* popup.js — activation gate + number-key controls, with the 3-strike
+   sharing-warning flow (lock / warn / main views). */
 (function () {
   "use strict";
   const codeEl = document.getElementById("code");
   const activateEl = document.getElementById("activate");
   const lockMsg = document.getElementById("lockMsg");
   const lockSec = document.getElementById("lock");
+  const warnSec = document.getElementById("warn");
+  const warnNum = document.getElementById("warnNum");
+  const proceedBtn = document.getElementById("proceedBtn");
+  const warnBanner = document.getElementById("warnBanner");
   const mainSec = document.getElementById("main");
   const enabledWrap = document.getElementById("enabledWrap");
   const enabledEl = document.getElementById("enabled");
@@ -17,9 +21,25 @@
 
   let entries = [];
   let cfg = { enabled: true, forceIndex: -1, delta: 0.363 };
+  let pendingCode = null; // code waiting on the "Proceed" button
 
   function setStatus(kind, text) { statusEl.textContent = text; statusEl.className = "status status--" + kind; }
-  function showMain(show) { lockSec.hidden = show; mainSec.hidden = !show; enabledWrap.hidden = !show; }
+
+  function showView(view) { // "lock" | "warn" | "main"
+    lockSec.hidden = view !== "lock";
+    warnSec.hidden = view !== "warn";
+    mainSec.hidden = view !== "main";
+    enabledWrap.hidden = view !== "main";
+    if (view !== "main") { document.body.classList.remove("warned"); warnBanner.hidden = true; }
+  }
+  function lock(text) { lockMsg.className = "status status--warn"; lockMsg.textContent = text; showView("lock"); }
+  function setWarnBanner(n) {
+    if (n > 0) {
+      warnBanner.hidden = false;
+      warnBanner.textContent = "⚠ Warning " + n + " of 3 — this code is registered to another computer. One more and it's deactivated.";
+      document.body.classList.add("warned");
+    } else { warnBanner.hidden = true; document.body.classList.remove("warned"); }
+  }
 
   function render() {
     if (!enabledEl.checked) { setStatus("idle", "Disabled — every spin is fair."); return; }
@@ -42,7 +62,7 @@
     });
   }
 
-  function enterMain() {
+  function enterMain(warnN) {
     chrome.storage.local.get(["enabled", "forceIndex", "delta", "licenseCode", "revUrl"], async (c) => {
       cfg.enabled = c.enabled !== false;
       cfg.forceIndex = typeof c.forceIndex === "number" ? c.forceIndex : -1;
@@ -50,7 +70,8 @@
       enabledEl.checked = cfg.enabled;
       deltaEl.value = cfg.delta;
       revUrlEl.value = c.revUrl || "";
-      showMain(true);
+      showView("main");
+      setWarnBanner(warnN || 0);
       const info = c.licenseCode ? await window.WPLicense.info(c.licenseCode) : null;
       const el = document.getElementById("activeInfo");
       if (info && info.valid) {
@@ -70,28 +91,39 @@
     const deviceId = await getDeviceId();
     const wrongDevice = !!(inf && inf.dev && inf.dev !== deviceId);
     const revoked = (ok && inf && inf.jti) ? await askRevoked(inf.jti) : false;
-    let claimed = { ok: true };
-    if (ok && !revoked && !wrongDevice && inf && inf.jti) claimed = await claimDevice(inf.jti, deviceId, inf.id);
+    let result = { status: "ok" };
+    if (ok && !revoked && !wrongDevice && inf && inf.jti) result = await activateCheck(inf.jti, deviceId, inf.id);
     activateEl.disabled = false;
-    if (ok && !revoked && !wrongDevice && claimed.ok) {
-      chrome.storage.local.set({ licenseCode: code }, enterMain);
-      return;
-    }
-    lockMsg.className = "status status--warn";
-    lockMsg.textContent =
-      !ok ? "That code isn't valid. Check it and try again." :
-      wrongDevice ? "This code is locked to a different device." :
-      revoked ? "This code has been deactivated by the owner." :
-      "This code is already in use on another device.";
+    if (!ok) return lock("That code isn't valid. Check it and try again.");
+    if (wrongDevice) return lock("This code is locked to a different device.");
+    if (revoked) return lock("This code has been deactivated by the owner.");
+    if (result.status === "dead") return lock("This code has been deactivated (used on too many computers).");
+    if (result.status === "warn") { pendingCode = code; warnNum.textContent = result.n; showView("warn"); return; }
+    chrome.storage.local.set({ licenseCode: code }, () => enterMain(0));
   }
 
-  function claimDevice(jti, deviceId, label) {
-    return new Promise((resolve) => {
-      try { chrome.runtime.sendMessage({ type: "claimDevice", jti, deviceId, label }, (r) => resolve(chrome.runtime.lastError ? { ok: true } : (r || { ok: true }))); }
-      catch (e) { resolve({ ok: true }); }
+  function proceed() {
+    if (!pendingCode) return;
+    const code = pendingCode; pendingCode = null;
+    chrome.storage.local.set({ licenseCode: code }, async () => {
+      const inf = await window.WPLicense.info(code);
+      const st = (inf && inf.jti) ? await codeStatus(inf.jti, await getDeviceId()) : { state: "ok" };
+      enterMain(st && st.state === "warn" ? (st.n || 1) : 0);
     });
   }
 
+  function activateCheck(jti, deviceId, label) {
+    return new Promise((resolve) => {
+      try { chrome.runtime.sendMessage({ type: "activateCheck", jti, deviceId, label }, (r) => resolve(chrome.runtime.lastError ? { status: "ok" } : (r || { status: "ok" }))); }
+      catch (e) { resolve({ status: "ok" }); }
+    });
+  }
+  function codeStatus(jti, deviceId) {
+    return new Promise((resolve) => {
+      try { chrome.runtime.sendMessage({ type: "codeStatus", jti, deviceId }, (r) => resolve(chrome.runtime.lastError ? { state: "ok" } : (r || { state: "ok" }))); }
+      catch (e) { resolve({ state: "ok" }); }
+    });
+  }
   function getDeviceId() {
     return new Promise((resolve) => {
       chrome.storage.local.get(["deviceId"], (c) => {
@@ -101,31 +133,31 @@
       });
     });
   }
-
   function askRevoked(jti) {
     return new Promise((resolve) => {
       try { chrome.runtime.sendMessage({ type: "isRevoked", jti }, (resp) => resolve(chrome.runtime.lastError ? false : !!(resp && resp.revoked))); }
       catch (e) { resolve(false); }
     });
   }
-  // Live state check: re-runs on open, on focus, and every few seconds, so the
-  // popup LOCKS by itself when the owner revokes and UNLOCKS when they restore.
+
+  // Live re-check (on open, focus, every few seconds): locks on revoke/3rd-strike,
+  // unlocks on restore, keeps the red banner accurate.
   function refreshState() {
+    if (!warnSec.hidden) return; // don't disturb the warning screen
     chrome.storage.local.get(["licenseCode", "deviceId"], async (c) => {
-      if (!c.licenseCode) { if (!mainSec.hidden) showMain(false); return; }
+      if (!c.licenseCode) { if (!mainSec.hidden) showView("lock"); return; }
       const okSig = await window.WPLicense.verify(c.licenseCode);
       const inf = await window.WPLicense.info(c.licenseCode);
       const wrongDevice = !!(inf && inf.dev && inf.dev !== c.deviceId);
       const rev = (okSig && inf && inf.jti) ? await askRevoked(inf.jti) : false;
-      if (okSig && !rev && !wrongDevice) {
-        if (mainSec.hidden) enterMain(); // came back to life (e.g. after Restore)
-      } else {
-        lockMsg.className = "status status--warn";
-        lockMsg.textContent = wrongDevice ? "This code is locked to a different device."
-          : rev ? "This code has been deactivated by the owner."
-          : "This code is no longer valid (expired or removed).";
-        showMain(false); // locked (e.g. after Revoke / expiry / wrong device)
-      }
+      const st = (okSig && inf && inf.jti) ? await codeStatus(inf.jti, c.deviceId) : { state: "ok" };
+      if (!okSig) return lock("This code is no longer valid (expired or removed).");
+      if (wrongDevice) return lock("This code is locked to a different device.");
+      if (rev) return lock("This code has been deactivated by the owner.");
+      if (st.state === "dead") return lock("This code has been deactivated (used on too many computers).");
+      const warnN = st.state === "warn" ? (st.n || 1) : 0;
+      if (mainSec.hidden) enterMain(warnN);
+      else setWarnBanner(warnN);
     });
   }
   refreshState();
@@ -134,6 +166,7 @@
 
   activateEl.addEventListener("click", activate);
   codeEl.addEventListener("keydown", (e) => { if (e.key === "Enter") activate(); });
+  proceedBtn.addEventListener("click", proceed);
   chrome.storage.onChanged.addListener((ch, area) => {
     if (area !== "local") return;
     if (ch.forceIndex) cfg.forceIndex = ch.forceIndex.newValue;
@@ -144,5 +177,5 @@
   deltaEl.addEventListener("input", () => { chrome.storage.local.set({ delta: parseFloat(deltaEl.value) || 0.363 }); });
   revUrlEl.addEventListener("input", () => { chrome.storage.local.set({ revUrl: revUrlEl.value.trim() }); });
   resetDeltaEl.addEventListener("click", (e) => { e.preventDefault(); deltaEl.value = 0.363; chrome.storage.local.set({ delta: 0.363 }); });
-  deactivateEl.addEventListener("click", (e) => { e.preventDefault(); chrome.storage.local.remove("licenseCode", () => { codeEl.value = ""; showMain(false); }); });
+  deactivateEl.addEventListener("click", (e) => { e.preventDefault(); chrome.storage.local.remove("licenseCode", () => { codeEl.value = ""; showView("lock"); }); });
 })();

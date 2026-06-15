@@ -20,6 +20,15 @@
       } catch (e) { resolve(false); }
     });
   }
+  function codeDead(jti, deviceId) {
+    return new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage({ type: "codeStatus", jti, deviceId }, (r) => {
+          resolve(!chrome.runtime.lastError && r && r.state === "dead");
+        });
+      } catch (e) { resolve(false); }
+    });
+  }
   async function isActivated() {
     try {
       const c = await chrome.storage.local.get(["licenseCode", "deviceId"]);
@@ -28,6 +37,7 @@
       const inf = await self.WPLicense.info(c.licenseCode);
       if (inf && inf.dev && inf.dev !== c.deviceId) return false; // locked to another device
       if (inf && inf.jti && (await askRevoked(inf.jti))) return false; // revoked by owner
+      if (inf && inf.jti && (await codeDead(inf.jti, c.deviceId))) return false; // auto-revoked (3 strikes)
       return true;
     } catch (e) { return false; }
   }

@@ -44,6 +44,15 @@ input:checked + .slider::before { transform: translateX(20px); }
 .hideback { text-align: right; margin-top: 10px; }
 
 .active-info { font-size: 11.5px; color: #86efac; margin-bottom: 10px; }
+
+/* 3-strike warning */
+#warn { text-align: center; padding: 8px 4px 4px; }
+.warn-big { font-size: 26px; font-weight: 800; color: #fca5a5; margin: 6px 0 12px; }
+.warn-text { font-size: 13px; color: #fecaca; line-height: 1.5; margin: 0 0 18px; }
+.btn-warn { width: 100%; background: #dc2626; color: #fff; border: none; font: inherit; font-weight: 700; padding: 11px; border-radius: 8px; cursor: pointer; }
+.btn-warn:hover { background: #b91c1c; }
+.warn-banner { background: #7f1d1d; color: #fecaca; border: 1px solid #dc2626; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; margin-bottom: 10px; }
+body.warned { box-shadow: inset 0 0 0 3px #dc2626; }
 .devbox { margin-top: 14px; padding: 10px; border: 1px dashed var(--border); border-radius: 8px; }
 .devbox-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
 .devbox-row { display: flex; align-items: center; gap: 8px; }
