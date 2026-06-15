@@ -22,10 +22,11 @@
   }
   async function isActivated() {
     try {
-      const c = await chrome.storage.local.get(["licenseCode"]);
+      const c = await chrome.storage.local.get(["licenseCode", "deviceId"]);
       if (!c.licenseCode) return false;
       if (!(await self.WPLicense.verify(c.licenseCode))) return false; // bad sig or expired
       const inf = await self.WPLicense.info(c.licenseCode);
+      if (inf && inf.dev && inf.dev !== c.deviceId) return false; // locked to another device
       if (inf && inf.jti && (await askRevoked(inf.jti))) return false; // revoked by owner
       return true;
     } catch (e) { return false; }

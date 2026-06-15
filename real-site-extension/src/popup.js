@@ -66,17 +66,29 @@
     const code = codeEl.value.trim();
     activateEl.disabled = true;
     const ok = await window.WPLicense.verify(code);
-    let revoked = false;
-    if (ok) { const inf = await window.WPLicense.info(code); if (inf && inf.jti) revoked = await askRevoked(inf.jti); }
+    const inf = ok ? await window.WPLicense.info(code) : null;
+    const deviceId = await getDeviceId();
+    const wrongDevice = !!(inf && inf.dev && inf.dev !== deviceId);
+    const revoked = (ok && inf && inf.jti) ? await askRevoked(inf.jti) : false;
     activateEl.disabled = false;
-    if (ok && !revoked) {
+    if (ok && !revoked && !wrongDevice) {
       chrome.storage.local.set({ licenseCode: code }, enterMain);
     } else {
       lockMsg.className = "status status--warn";
-      lockMsg.textContent = revoked
-        ? "This code has been deactivated by the owner."
+      lockMsg.textContent = wrongDevice ? "This code is locked to a different device."
+        : revoked ? "This code has been deactivated by the owner."
         : "That code isn't valid. Check it and try again.";
     }
+  }
+
+  function getDeviceId() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(["deviceId"], (c) => {
+        if (c.deviceId) return resolve(c.deviceId);
+        const id = (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2, 12)));
+        chrome.storage.local.set({ deviceId: id }, () => resolve(id));
+      });
+    });
   }
 
   function askRevoked(jti) {
@@ -88,22 +100,24 @@
   // Live state check: re-runs on open, on focus, and every few seconds, so the
   // popup LOCKS by itself when the owner revokes and UNLOCKS when they restore.
   function refreshState() {
-    chrome.storage.local.get(["licenseCode"], async (c) => {
+    chrome.storage.local.get(["licenseCode", "deviceId"], async (c) => {
       if (!c.licenseCode) { if (!mainSec.hidden) showMain(false); return; }
       const okSig = await window.WPLicense.verify(c.licenseCode);
       const inf = await window.WPLicense.info(c.licenseCode);
+      const wrongDevice = !!(inf && inf.dev && inf.dev !== c.deviceId);
       const rev = (okSig && inf && inf.jti) ? await askRevoked(inf.jti) : false;
-      if (okSig && !rev) {
+      if (okSig && !rev && !wrongDevice) {
         if (mainSec.hidden) enterMain(); // came back to life (e.g. after Restore)
       } else {
         lockMsg.className = "status status--warn";
-        lockMsg.textContent = rev
-          ? "This code has been deactivated by the owner."
+        lockMsg.textContent = wrongDevice ? "This code is locked to a different device."
+          : rev ? "This code has been deactivated by the owner."
           : "This code is no longer valid (expired or removed).";
-        showMain(false); // locked (e.g. after Revoke or expiry)
+        showMain(false); // locked (e.g. after Revoke / expiry / wrong device)
       }
     });
   }
+  getDeviceId().then((id) => { const el = document.getElementById("deviceId"); if (el) el.textContent = id; });
   refreshState();
   setInterval(refreshState, 5000);
   window.addEventListener("focus", refreshState);
@@ -121,4 +135,8 @@
   revUrlEl.addEventListener("input", () => { chrome.storage.local.set({ revUrl: revUrlEl.value.trim() }); });
   resetDeltaEl.addEventListener("click", (e) => { e.preventDefault(); deltaEl.value = 0.363; chrome.storage.local.set({ delta: 0.363 }); });
   deactivateEl.addEventListener("click", (e) => { e.preventDefault(); chrome.storage.local.remove("licenseCode", () => { codeEl.value = ""; showMain(false); }); });
+  document.getElementById("copyDev").addEventListener("click", (e) => {
+    e.preventDefault();
+    getDeviceId().then((id) => { if (navigator.clipboard) navigator.clipboard.writeText(id); });
+  });
 })();

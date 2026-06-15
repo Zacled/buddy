@@ -30,11 +30,12 @@ function refreshBadge() {
   });
 }
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.get(["enabled", "forceIndex", "delta"], (c) => {
+  chrome.storage.local.get(["enabled", "forceIndex", "delta", "deviceId"], (c) => {
     const seed = {};
     if (c.enabled === undefined) seed.enabled = true;
     if (c.forceIndex === undefined) seed.forceIndex = -1;
     if (c.delta === undefined) seed.delta = 0.363;
+    if (!c.deviceId) seed.deviceId = (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2, 12)));
     if (Object.keys(seed).length) chrome.storage.local.set(seed);
     refreshBadge();
   });

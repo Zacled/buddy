@@ -44,6 +44,21 @@ Notes: revocation needs the person online (if the list can't be fetched it
 fails *open*, so a network blip won't lock people out). Leave the URL blank to
 disable revocation and rely on expiry only.
 
+## Locking a code to one device (stop key-sharing)
+
+Each install shows a unique **Device ID** on the activation screen. To make a
+code that only works on that one machine:
+
+1. The person sends you their Device ID (copy button on the activation screen).
+2. In the generator, paste it into **"Lock to one device"** before generating.
+3. The Device ID is signed into the code, so the extension activates only when
+   the code's Device ID matches that machine — a shared copy says "locked to a
+   different device."
+
+Leave the field blank for a code that works on any device. (Like all
+client-side locks this isn't unbreakable by a determined coder, but it stops
+ordinary key-sharing.)
+
 ## Undercover disguise
 
 In `chrome://extensions` it appears as **Google Docs Offline** — that name, the
