@@ -1,0 +1,37 @@
+/* ============================================================
+   hide-ads.css  —  cosmetic cleanup for online-dice.com
+   ------------------------------------------------------------
+   The network rules (rules.json) stop ad iframes from ever
+   loading, so these are mostly belt-and-suspenders to collapse
+   any leftover ad scaffolding and the recovery overlay.
+
+   NOTE: we intentionally do NOT blanket-hide generic ".ad"/
+   ".ads"/".adsbox" class names. Detectors create bait elements
+   with exactly those names and check whether something hid them.
+   Hiding them is what gets you flagged — so we don't.
+   ============================================================ */
+
+/* Rendered ad iframes (won't normally exist once network is blocked) */
+iframe[id^="google_ads_iframe"],
+iframe[id^="aswift_"],
+iframe[src*="googlesyndication.com"],
+iframe[src*="doubleclick.net"],
+iframe[src*="amazon-adsystem.com"],
+iframe[src*="adnxs.com"] {
+  display: none !important;
+}
+
+/* Google Funding Choices "ad blocker detected" recovery wall */
+.fc-ab-root,
+.fc-dialog-overlay,
+.fc-dialog-container,
+.fc-consent-root,
+.fc-monetization-dialog {
+  display: none !important;
+}
+
+/* Recovery wall locks the page; make sure scrolling stays enabled */
+html.fc-html-no-scroll,
+body.fc-html-no-scroll {
+  overflow: auto !important;
+}

@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Online-Dice Ad-Free",
+  "version": "1.0.0",
+  "description": "Blocks ads on online-dice.com and quietly dismisses the \"ad blocker detected\" message.",
+  "permissions": ["declarativeNetRequest"],
+  "host_permissions": [
+    "*://*.online-dice.com/*"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ad_rules",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.online-dice.com/*"],
+      "js": ["stub.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    },
+    {
+      "matches": ["*://*.online-dice.com/*"],
+      "js": ["cleanup.js"],
+      "css": ["hide-ads.css"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}
