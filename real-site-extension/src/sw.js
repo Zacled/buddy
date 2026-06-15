@@ -17,7 +17,7 @@ const BAKED_REVOCATION_URL = "https://api.github.com/repos/Zacled/buddy/contents
 // One-device auto-binding (optional). Put a free getpantry.cloud Pantry ID here.
 // When set, the FIRST device to activate a code claims it; a shared copy is then
 // rejected ("already in use on another device"). Blank = off.
-const PANTRY_ID = "";
+const PANTRY_ID = "7d7f229c-0e9b-4be0-b325-1d0537c2c70c";
 
 async function revUrl() {
   try {
