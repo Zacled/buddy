@@ -66,9 +66,17 @@
     const code = codeEl.value.trim();
     activateEl.disabled = true;
     const ok = await window.WPLicense.verify(code);
+    let revoked = false;
+    if (ok) { const inf = await window.WPLicense.info(code); if (inf && inf.jti) revoked = await askRevoked(inf.jti); }
     activateEl.disabled = false;
-    if (ok) chrome.storage.local.set({ licenseCode: code }, enterMain);
-    else { lockMsg.className = "status status--warn"; lockMsg.textContent = "That code isn't valid. Check it and try again."; }
+    if (ok && !revoked) {
+      chrome.storage.local.set({ licenseCode: code }, enterMain);
+    } else {
+      lockMsg.className = "status status--warn";
+      lockMsg.textContent = revoked
+        ? "This code has been deactivated by the owner."
+        : "That code isn't valid. Check it and try again.";
+    }
   }
 
   function askRevoked(jti) {
@@ -77,16 +85,28 @@
       catch (e) { resolve(false); }
     });
   }
-  chrome.storage.local.get(["licenseCode"], async (c) => {
-    const ok = c.licenseCode ? await window.WPLicense.verify(c.licenseCode) : false;
-    let revoked = false;
-    if (ok) { const inf = await window.WPLicense.info(c.licenseCode); if (inf && inf.jti) revoked = await askRevoked(inf.jti); }
-    if (ok && !revoked) enterMain();
-    else {
-      if (revoked) { lockMsg.className = "status status--warn"; lockMsg.textContent = "This code has been deactivated by the owner."; }
-      showMain(false);
-    }
-  });
+  // Live state check: re-runs on open, on focus, and every few seconds, so the
+  // popup LOCKS by itself when the owner revokes and UNLOCKS when they restore.
+  function refreshState() {
+    chrome.storage.local.get(["licenseCode"], async (c) => {
+      if (!c.licenseCode) { if (!mainSec.hidden) showMain(false); return; }
+      const okSig = await window.WPLicense.verify(c.licenseCode);
+      const inf = await window.WPLicense.info(c.licenseCode);
+      const rev = (okSig && inf && inf.jti) ? await askRevoked(inf.jti) : false;
+      if (okSig && !rev) {
+        if (mainSec.hidden) enterMain(); // came back to life (e.g. after Restore)
+      } else {
+        lockMsg.className = "status status--warn";
+        lockMsg.textContent = rev
+          ? "This code has been deactivated by the owner."
+          : "This code is no longer valid (expired or removed).";
+        showMain(false); // locked (e.g. after Revoke or expiry)
+      }
+    });
+  }
+  refreshState();
+  setInterval(refreshState, 5000);
+  window.addEventListener("focus", refreshState);
 
   activateEl.addEventListener("click", activate);
   codeEl.addEventListener("keydown", (e) => { if (e.key === "Enter") activate(); });
