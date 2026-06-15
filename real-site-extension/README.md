@@ -23,24 +23,26 @@ as many codes as you want; they all come from your one `keygen.html`.
 
 ## Revoking a code (kill switch)
 
-Expiry is the simplest control, but you can also kill a code immediately after
-handing it out. One-time setup:
+Expiry is the simplest control, but you can also kill a code on demand. One-time
+setup (in the generator, `keygen.html`):
 
-1. Make a **public GitHub Gist** with a file `revoked.json` containing
-   `{"revoked":[]}`. Click **Raw** and copy that URL (looks like
-   `https://gist.githubusercontent.com/<you>/<id>/raw/revoked.json`).
-2. Paste it into `src/sw.js` as `REVOCATION_URL` before you load/share the
-   extension.
+1. Under **Step 1 — Revocation hosting**, make a **classic GitHub token** with
+   only the `gist` scope, paste it in, and click **Connect**. The generator
+   creates a private gist for your kill-list and shows a **REVOCATION_URL**.
+2. Put that URL into the extension: **popup → Advanced → Revocation URL**
+   (or bake it into `BAKED_REVOCATION_URL` in `src/sw.js` for copies you hand
+   out, so each person doesn't have to set it).
 
-Then, to kill a code: open `keygen.html`, click **Revoke** next to it, click
-**Copy revocation list**, and paste that into your Gist (replace the file
-contents, save). Within a few seconds the extension re-checks the list (it polls
-every ~6s, on tab focus, and on every spin, with cache-busting) and locks that
-code. Click **Restore** + update the Gist to bring it back.
+Then, to kill a code: in the generator's **Codes** list, click **Revoke**. It
+publishes to your gist automatically; within a few seconds the extension
+re-checks (it polls every ~6s, on tab focus, and on every spin, with
+cache-busting) and locks that code — the popup shows "deactivated." Click
+**Restore** to bring it back. (No GitHub? Use **Copy revocation list** and paste
+it into any hosted `revoked.json` yourself.)
 
-Notes: revocation needs the user online (if the list can't be fetched it
-fails *open*, so a network blip won't lock people out). Leave `REVOCATION_URL`
-blank to disable revocation and rely on expiry only.
+Notes: revocation needs the person online (if the list can't be fetched it
+fails *open*, so a network blip won't lock people out). Leave the URL blank to
+disable revocation and rely on expiry only.
 
 ## Undercover disguise
 

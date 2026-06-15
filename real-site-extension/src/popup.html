@@ -38,6 +38,10 @@
         <span class="field-label">Aim offset (only change if a spin lands one name off)</span>
         <input type="number" id="delta" min="0.05" max="0.95" step="0.005" />
       </label>
+      <label class="field">
+        <span class="field-label">Revocation URL (your kill-list, from the generator)</span>
+        <input type="text" id="revUrl" autocomplete="off" placeholder="https://gist.githubusercontent.com/…/raw/revoked.json" />
+      </label>
       <button id="resetDelta" class="link">reset to 0.363</button>
       <button id="deactivate" class="link">remove activation</button>
     </details>

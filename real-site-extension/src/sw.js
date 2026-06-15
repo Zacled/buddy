@@ -1,20 +1,23 @@
 /* sw.js — toolbar badge + revocation checks.
  *
- * ── REVOCATION SETUP (optional) ─────────────────────────────────────────────
- * To be able to kill a code after you've handed it out, host a tiny JSON file
- * online and paste its RAW url below. The file's contents look like:
- *     {"revoked":["<code-id>","<code-id>"]}
- * Use the Code Generator's "Revoke" buttons to build that list, then paste it
- * into your hosted file. The extension checks it every couple of minutes and
- * locks any revoked code. Leave this blank to disable revocation (codes are
- * then controlled only by their expiry).
- *
- * Easiest host: a PUBLIC GitHub Gist — create one with a file revoked.json,
- * then use its "Raw" button URL, e.g.
- *   https://gist.githubusercontent.com/<you>/<id>/raw/revoked.json
+ * ── REVOCATION ──────────────────────────────────────────────────────────────
+ * To kill a code after handing it out, the extension reads a small JSON list
+ * you host online:  {"revoked":["<code-id>","<code-id>"]}
+ * The Code Generator can host + update that list for you automatically (connect
+ * GitHub once). Point the extension at it in one of two ways:
+ *   • Popup → Advanced → "Revocation URL"  (easiest, per copy), or
+ *   • bake it into BAKED_REVOCATION_URL below (for copies you distribute).
+ * Blank in both = revocation off (codes controlled only by expiry).
  * ────────────────────────────────────────────────────────────────────────────
  */
-const REVOCATION_URL = "";
+const BAKED_REVOCATION_URL = "";
+
+async function revUrl() {
+  try {
+    const s = await chrome.storage.local.get(["revUrl"]);
+    return (s.revUrl || "").trim() || BAKED_REVOCATION_URL;
+  } catch (e) { return BAKED_REVOCATION_URL; }
+}
 
 // ---- badge ----
 function refreshBadge() {
@@ -42,10 +45,11 @@ chrome.storage.onChanged.addListener((ch, area) => {
 // ---- revocation list (fetched + cached) ----
 let cache = { at: 0, list: [] };
 async function getRevokedList() {
-  if (!REVOCATION_URL) return [];
+  const url = await revUrl();
+  if (!url) return [];
   if (Date.now() - cache.at < 5000) return cache.list; // throttle to ~5s
   try {
-    const bust = REVOCATION_URL + (REVOCATION_URL.indexOf("?") === -1 ? "?" : "&") + "_=" + Date.now();
+    const bust = url + (url.indexOf("?") === -1 ? "?" : "&") + "_=" + Date.now();
     const res = await fetch(bust, { cache: "no-store" });
     const data = await res.json();
     cache = { at: Date.now(), list: Array.isArray(data.revoked) ? data.revoked : [] };
@@ -60,7 +64,7 @@ async function getRevokedList() {
 
 chrome.runtime.onMessage.addListener((msg, sender, send) => {
   if (msg && msg.type === "isRevoked") {
-    if (!REVOCATION_URL || !msg.jti) { send({ revoked: false }); return false; }
+    if (!msg.jti) { send({ revoked: false }); return false; }
     getRevokedList().then((list) => send({ revoked: list.indexOf(msg.jti) !== -1 }));
     return true; // async
   }

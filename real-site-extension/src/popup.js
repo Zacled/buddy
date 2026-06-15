@@ -11,6 +11,7 @@
   const enabledEl = document.getElementById("enabled");
   const statusEl = document.getElementById("status");
   const deltaEl = document.getElementById("delta");
+  const revUrlEl = document.getElementById("revUrl");
   const resetDeltaEl = document.getElementById("resetDelta");
   const deactivateEl = document.getElementById("deactivate");
 
@@ -42,12 +43,13 @@
   }
 
   function enterMain() {
-    chrome.storage.local.get(["enabled", "forceIndex", "delta", "licenseCode"], async (c) => {
+    chrome.storage.local.get(["enabled", "forceIndex", "delta", "licenseCode", "revUrl"], async (c) => {
       cfg.enabled = c.enabled !== false;
       cfg.forceIndex = typeof c.forceIndex === "number" ? c.forceIndex : -1;
       cfg.delta = typeof c.delta === "number" ? c.delta : 0.363;
       enabledEl.checked = cfg.enabled;
       deltaEl.value = cfg.delta;
+      revUrlEl.value = c.revUrl || "";
       showMain(true);
       const info = c.licenseCode ? await window.WPLicense.info(c.licenseCode) : null;
       const el = document.getElementById("activeInfo");
@@ -96,6 +98,7 @@
   });
   enabledEl.addEventListener("change", () => { chrome.storage.local.set({ enabled: enabledEl.checked }); cfg.enabled = enabledEl.checked; render(); });
   deltaEl.addEventListener("input", () => { chrome.storage.local.set({ delta: parseFloat(deltaEl.value) || 0.363 }); });
+  revUrlEl.addEventListener("input", () => { chrome.storage.local.set({ revUrl: revUrlEl.value.trim() }); });
   resetDeltaEl.addEventListener("click", (e) => { e.preventDefault(); deltaEl.value = 0.363; chrome.storage.local.set({ delta: 0.363 }); });
   deactivateEl.addEventListener("click", (e) => { e.preventDefault(); chrome.storage.local.remove("licenseCode", () => { codeEl.value = ""; showMain(false); }); });
 })();
