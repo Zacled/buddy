@@ -10,7 +10,7 @@
  * Blank in both = revocation off (codes controlled only by expiry).
  * ────────────────────────────────────────────────────────────────────────────
  */
-const BAKED_REVOCATION_URL = "";
+const BAKED_REVOCATION_URL = "https://raw.githubusercontent.com/Zacled/buddy/claude/stoic-archimedes-7aeh6g/revoked.json";
 
 async function revUrl() {
   try {
