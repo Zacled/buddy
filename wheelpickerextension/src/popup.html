@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="popup.css" />
+  <title>Wheel Picker</title>
+</head>
+<body>
+  <header>
+    <button id="logout" class="logout-btn" type="button" title="Log out — return to the activation screen" hidden>⎋ Log out</button>
+    <h1>Wheel Picker</h1>
+    <label class="switch" title="Enable / disable" id="enabledWrap" hidden>
+      <input type="checkbox" id="enabled" /><span class="slider"></span>
+    </label>
+  </header>
+
+  <section id="lock">
+    <p class="sub">Enter your activation code to unlock.</p>
+    <label class="field">
+      <span class="field-label">Activation code</span>
+      <input type="text" id="code" autocomplete="off" placeholder="Paste your code…" />
+    </label>
+    <button id="activate" class="btn">Activate</button>
+    <div id="lockMsg" class="status status--idle">A code is required. Ask the owner for one.</div>
+  </section>
+
+  <section id="warn" hidden>
+    <div class="warn-big">⚠ Warning <span id="warnNum">1</span> of 3</div>
+    <p class="warn-text">Your code is active on another device. Don't share it —
+      on the <b>3rd</b> time it's permanently auto-revoked for everyone.</p>
+    <button id="proceedBtn" class="btn btn-warn">Proceed</button>
+  </section>
+
+  <section id="main" hidden>
+    <div id="warnBanner" class="warn-banner" hidden></div>
+    <div id="activeInfo" class="active-info"></div>
+    <p class="sub">On <strong>wheelofnames.com</strong>, just press a number key:</p>
+    <div class="keys">
+      <div><span class="k">1</span>–<span class="k">9</span> &nbsp;that position wins (1 = first name)</div>
+      <div><span class="k">0</span> or <span class="k">Esc</span> &nbsp;fair spin</div>
+    </div>
+    <div id="status" class="status status--idle">Open wheelofnames.com to begin.</div>
+    <details class="adv">
+      <summary>Advanced</summary>
+      <label class="field">
+        <span class="field-label">Aim offset (only change if a spin lands one name off)</span>
+        <input type="number" id="delta" min="0.05" max="0.95" step="0.005" />
+      </label>
+      <label class="field">
+        <span class="field-label">Revocation URL (your kill-list, from the generator)</span>
+        <input type="text" id="revUrl" autocomplete="off" placeholder="https://gist.githubusercontent.com/…/raw/revoked.json" />
+      </label>
+      <button id="resetDelta" class="link">reset to 0.363</button>
+    </details>
+  </section>
+
+  <script src="license.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
