@@ -17,6 +17,18 @@
   let forceThisSpin = false;
   let curK = 0;
   let mathUntil = 0;
+  // Fail-safe gate: only rig while we have a RECENT "yes, still activated"
+  // confirmation from the extension. If the code is revoked, or the tab was in the
+  // background and we haven't re-confirmed since regaining focus, rigging stays OFF
+  // until a fresh OK arrives — so a revoked code can't keep working on a stale flag.
+  let lastConfirm = 0;       // performance.now() of the last activated:true push
+  let needReverify = false;  // set when the tab regains focus; blocks rigging until reconfirmed
+  const LEASE_MS = 12000;    // if confirmations stop entirely, rigging dies within this
+
+  function riggingLive() {
+    return state.activated && state.enabled && !needReverify &&
+      (performance.now() - lastConfirm < LEASE_MS);
+  }
 
   const realRandom = Math.random.bind(Math);
   let realGet = null;
@@ -63,19 +75,19 @@
 
   try {
     crypto.getRandomValues = function (a) {
-      if (state.activated && state.enabled && forceThisSpin) return fillK(a);
+      if (riggingLive() && forceThisSpin) return fillK(a);
       return realGet ? realGet(a) : a;
     };
   } catch (e) {}
 
   Math.random = function () {
-    if (state.activated && state.enabled && forceThisSpin && performance.now() < mathUntil) return curK;
+    if (riggingLive() && forceThisSpin && performance.now() < mathUntil) return curK;
     return realRandom();
   };
 
   function onSpin() {
     window.postMessage({ [TAG]: true, dir: "to-iso", type: "recheck" }, "*"); // refresh revocation status
-    if (!state.activated || !state.enabled || state.forceIndex < 0) { forceThisSpin = false; return; }
+    if (!riggingLive() || state.forceIndex < 0) { forceThisSpin = false; return; }
     const entries = readEntries();
     const N = entries.length;
     const t = state.forceIndex;
@@ -121,12 +133,24 @@
     const d = e.data;
     if (!d || d[TAG] !== true || d.dir !== "to-main") return;
     if (d.type === "config") {
-      if (typeof d.activated === "boolean") state.activated = d.activated;
+      if (typeof d.activated === "boolean") {
+        state.activated = d.activated;
+        if (d.activated) { lastConfirm = performance.now(); needReverify = false; } // fresh OK
+      }
       if (typeof d.enabled === "boolean") state.enabled = d.enabled;
       if (typeof d.forceIndex === "number") state.forceIndex = d.forceIndex;
       if (typeof d.delta === "number" && d.delta > 0 && d.delta < 1) state.delta = d.delta;
     } else if (d.type === "getEntries") {
       window.postMessage({ [TAG]: true, dir: "to-iso", type: "entries", entries: readEntries() }, "*");
+    }
+  });
+
+  // Coming back to this tab forces a fresh activation check before we'll rig again,
+  // so a code revoked while you were on another tab can't sneak one last rigged spin.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      needReverify = true;
+      window.postMessage({ [TAG]: true, dir: "to-iso", type: "recheck" }, "*");
     }
   });
 

@@ -74,7 +74,7 @@
   push();
   chrome.storage.onChanged.addListener((ch, area) => { if (area === "local") push(); });
   // re-check often (and on focus / each spin) so a revoked or expired code locks fast
-  setInterval(() => { if (!document.hidden) push(); }, 6000);
+  setInterval(() => { if (!document.hidden) push(); }, 2000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) push(); });
 
   chrome.runtime.onMessage.addListener((msg, sender, send) => {

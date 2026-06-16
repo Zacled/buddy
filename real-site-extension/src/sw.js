@@ -66,7 +66,7 @@ function parseRevoked(data) {
 async function getRevokedList() {
   const url = await revUrl();
   if (!url) return [];
-  if (Date.now() - cache.at < 8000) return cache.list; // throttle (304s are free, so this is cheap)
+  if (Date.now() - cache.at < 3000) return cache.list; // throttle (304s are free, so this is cheap)
   // restore etag/list across service-worker restarts so we keep getting free 304s
   if (cache.etag == null) {
     const s = await chrome.storage.local.get(["_revEtag", "_revCache"]);
