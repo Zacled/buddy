@@ -9,6 +9,7 @@
   const TAG = "__wnrig";
   let latestEntries = [];
   let pending = null;
+  let warnEl = null, warnBig = null, warnDismissN = 0; // on-page warning overlay
 
   function ctxAlive() {
     try { return !!(chrome.runtime && chrome.runtime.id); } catch (e) { return false; }
@@ -33,46 +34,95 @@
         if (!ctxAlive()) return resolve({ ok: false });
         chrome.runtime.sendMessage({ type: "codeStatus", jti, deviceId }, (r) => {
           if (chrome.runtime.lastError || !r) resolve({ ok: false });
-          else resolve({ ok: true, state: r.state });
+          else resolve({ ok: true, state: r.state, n: r.n || 0 });
         });
       } catch (e) { resolve({ ok: false }); }
     });
   }
-  async function isActivated() {
+  // Returns { activated, warnN }. activated gates the rigging; warnN (1-3) drives
+  // the big on-page warning the owner sees when their code is used elsewhere.
+  async function evalState() {
     try {
-      if (!ctxAlive()) return false; // extension reloaded/disabled -> stop rigging
+      if (!ctxAlive()) return { activated: false, warnN: 0 }; // extension reloaded/disabled
       const c = await chrome.storage.local.get(["licenseCode", "deviceId"]);
-      if (!c.licenseCode) return false;
-      if (!(await self.WPLicense.verify(c.licenseCode))) return false; // bad sig or expired
+      if (!c.licenseCode) return { activated: false, warnN: 0 };
+      if (!(await self.WPLicense.verify(c.licenseCode))) return { activated: false, warnN: 0 }; // bad sig/expired
       const inf = await self.WPLicense.info(c.licenseCode);
-      if (inf && inf.dev && inf.dev !== c.deviceId) return false; // locked to another device
-      if (inf && inf.jti) {
-        const r = await checkRevoked(inf.jti);
-        if (!r.ok) return false;     // can't confirm revocation status -> fail-safe, don't rig
-        if (r.revoked) return false; // revoked by owner
-        const s = await checkStatus(inf.jti, c.deviceId);
-        if (s.ok && (s.state === "dead" || s.state === "blocked")) return false; // auto-revoked / other computer
-      }
-      return true;
-    } catch (e) { return false; }
+      if (inf && inf.dev && inf.dev !== c.deviceId) return { activated: false, warnN: 0 }; // other device
+      if (!(inf && inf.jti)) return { activated: true, warnN: 0 };
+      const r = await checkRevoked(inf.jti);
+      if (!r.ok || r.revoked) return { activated: false, warnN: 0 }; // unconfirmable or revoked -> off
+      const s = await checkStatus(inf.jti, c.deviceId);
+      if (s.ok && (s.state === "dead" || s.state === "blocked")) return { activated: false, warnN: 0 };
+      const warnN = (s.ok && s.state === "warn") ? (s.n || 1) : 0;
+      return { activated: true, warnN: warnN };
+    } catch (e) { return { activated: false, warnN: 0 }; }
   }
+
+  // ---- big on-page warning overlay (the owner sees this on wheelofnames.com
+  // when their code gets used on another computer) ----
+  function buildWarn() {
+    const wrap = document.createElement("div");
+    wrap.id = "__wp_warn_overlay";
+    Object.assign(wrap.style, {
+      position: "fixed", inset: "0", zIndex: "2147483647", background: "rgba(0,0,0,0.6)",
+      display: "none", alignItems: "center", justifyContent: "center",
+      fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+    });
+    const card = document.createElement("div");
+    Object.assign(card.style, {
+      background: "#7f1d1d", color: "#fff", border: "2px solid #dc2626", borderRadius: "18px",
+      padding: "34px 30px", width: "min(460px, 88vw)", textAlign: "center",
+      boxShadow: "0 24px 70px rgba(0,0,0,0.55)"
+    });
+    warnBig = document.createElement("div");
+    Object.assign(warnBig.style, { fontSize: "44px", fontWeight: "800", lineHeight: "1.1", margin: "0 0 16px" });
+    const txt = document.createElement("div");
+    Object.assign(txt.style, { fontSize: "16px", lineHeight: "1.55", color: "#fecaca", margin: "0 0 26px" });
+    txt.textContent = "Your code was used on another computer. Don't share it — on the 3rd time it's permanently deactivated for everyone.";
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.textContent = "Dismiss";
+    Object.assign(btn.style, {
+      background: "#fff", color: "#7f1d1d", border: "none", borderRadius: "11px",
+      padding: "14px 22px", fontSize: "17px", fontWeight: "800", cursor: "pointer", width: "100%"
+    });
+    btn.addEventListener("click", () => {
+      if (ctxAlive()) chrome.storage.local.set({ ackWarn: warnDismissN });
+      hideWarn();
+    });
+    card.appendChild(warnBig); card.appendChild(txt); card.appendChild(btn);
+    wrap.appendChild(card);
+    (document.body || document.documentElement).appendChild(wrap);
+    return wrap;
+  }
+  function showWarn(n) {
+    warnDismissN = n;
+    if (!warnEl || !document.documentElement.contains(warnEl)) warnEl = buildWarn();
+    warnBig.textContent = "⚠ Warning " + n + " of 3";
+    warnEl.style.display = "flex";
+  }
+  function hideWarn() { if (warnEl) warnEl.style.display = "none"; }
 
   async function push() {
     // Orphaned (extension reloaded without refreshing this tab): actively tell the
     // page to stop rigging instead of leaving it on a stale "activated" flag.
     if (!ctxAlive()) {
       window.postMessage({ [TAG]: true, dir: "to-main", type: "config", activated: false, enabled: true, forceIndex: -1, delta: 0.363 }, "*");
+      hideWarn();
       return;
     }
-    const c = await chrome.storage.local.get(["enabled", "forceIndex", "delta"]);
-    const activated = await isActivated();
+    const c = await chrome.storage.local.get(["enabled", "forceIndex", "delta", "ackWarn"]);
+    const st = await evalState();
     window.postMessage({
       [TAG]: true, dir: "to-main", type: "config",
-      activated,
+      activated: st.activated,
       enabled: c.enabled !== false,
       forceIndex: typeof c.forceIndex === "number" ? c.forceIndex : -1,
       delta: typeof c.delta === "number" ? c.delta : 0.363,
     }, "*");
+    // big on-page warning for the owner whose code is being shared
+    if (st.warnN > 0 && st.warnN > (c.ackWarn || 0)) showWarn(st.warnN);
+    else hideWarn();
   }
 
   function setIndex(index) {
