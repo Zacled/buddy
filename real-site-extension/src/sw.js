@@ -110,26 +110,42 @@ function recOf(bindings, jti) {
 async function activateCheck(jti, deviceId, label) {
   if (!PANTRY_ID || !jti || !deviceId) return { status: "ok" };
   try {
-    let bindings = null;
+    // Read the whole basket, change one record, write the whole basket back with
+    // POST (full replace). This dodges Pantry's PUT deep-merge, which can mangle
+    // the "seen" array — the bug that let shared codes slip through.
+    let bindings = {};
     const g = await fetch(PBIND, { headers: PJSON, cache: "no-store" });
-    if (g.ok) { try { bindings = await g.json(); } catch (e) { bindings = {}; } }
+    if (g.ok) { try { bindings = (await g.json()) || {}; } catch (e) { bindings = {}; } }
     const rec = recOf(bindings, jti);
     if (!rec) {
-      const method = bindings === null ? "POST" : "PUT";
-      await fetch(PBIND, { method, headers: PJSON, body: JSON.stringify({ [jti]: { dev: deviceId, w: 0, seen: [] } }) });
-      return { status: "ok" };
+      bindings[jti] = { dev: deviceId, w: 0, seen: [] };
+      await fetch(PBIND, { method: "POST", headers: PJSON, body: JSON.stringify(bindings) });
+      return { status: "ok" }; // first computer claims the code
     }
     if (rec.w >= 3) return { status: "dead" };
     if (rec.dev === deviceId) return { status: "ok" }; // the owner / bound computer
-    // a different computer (the person it was shared with) -> blocked + one strike per new computer
+    // a different computer (the person it was shared with) -> blocked, and each
+    // NEW computer counts one strike (the owner sees these as warnings).
     if (rec.seen.indexOf(deviceId) === -1) {
       rec.seen.push(deviceId);
-      const w = rec.seen.length;
-      await fetch(PBIND, { method: "PUT", headers: PJSON, body: JSON.stringify({ [jti]: { dev: rec.dev, w: w, seen: rec.seen } }) });
-      logAlert(jti, deviceId, label, w);
+      rec.w = rec.seen.length;
+      bindings[jti] = { dev: rec.dev, w: rec.w, seen: rec.seen };
+      await fetch(PBIND, { method: "POST", headers: PJSON, body: JSON.stringify(bindings) });
+      logAlert(jti, deviceId, label, rec.w);
     }
     return { status: "blocked" };
-  } catch (e) { return { status: "ok" }; } // fail-open
+  } catch (e) { return { status: "ok" }; } // fail-open: never lock out on a network blip
+}
+
+// Reachability probe for the popup's "test connection" button. A 400 means the
+// basket simply isn't created yet, which still proves Pantry is reachable.
+async function pantryPing() {
+  if (!PANTRY_ID) return { ok: false, reason: "off" };
+  try {
+    const r = await fetch(PBIND, { headers: PJSON, cache: "no-store" });
+    if (r.ok || r.status === 400) return { ok: true };
+    return { ok: false, reason: "HTTP " + r.status };
+  } catch (e) { return { ok: false, reason: "no network" }; }
 }
 
 // Periodic, throttled, never increments. The OWNER sees their warning count;
@@ -175,6 +191,10 @@ chrome.runtime.onMessage.addListener((msg, sender, send) => {
   }
   if (msg && msg.type === "codeStatus") {
     codeStatus(msg.jti, msg.deviceId).then((r) => send(r));
+    return true; // async
+  }
+  if (msg && msg.type === "pantryPing") {
+    pantryPing().then((r) => send(r));
     return true; // async
   }
 });

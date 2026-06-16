@@ -17,7 +17,9 @@
   const deltaEl = document.getElementById("delta");
   const revUrlEl = document.getElementById("revUrl");
   const resetDeltaEl = document.getElementById("resetDelta");
-  const deactivateEl = document.getElementById("deactivate");
+  const logoutEl = document.getElementById("logout");
+  const testConnEl = document.getElementById("testConn");
+  const shareConnEl = document.getElementById("shareConn");
 
   let entries = [];
   let cfg = { enabled: true, forceIndex: -1, delta: 0.363 };
@@ -30,6 +32,7 @@
     warnSec.hidden = view !== "warn";
     mainSec.hidden = view !== "main";
     enabledWrap.hidden = view !== "main";
+    logoutEl.hidden = view === "lock"; // the log-out button shows whenever a code is active
     if (view !== "main") { document.body.classList.remove("warned"); warnBanner.hidden = true; }
   }
   function lock(text) { lockMsg.className = "status status--warn"; lockMsg.textContent = text; showView("lock"); }
@@ -80,6 +83,7 @@
       } else el.textContent = "";
       render();
       loadEntries();
+      pingConn();
     });
   }
 
@@ -106,6 +110,32 @@
   // screen won't reappear for the same warning number (a new strike bumps it).
   function proceed() {
     chrome.storage.local.set({ ackWarn: currentWarnN }, () => enterMain(currentWarnN));
+  }
+
+  // Log out: drop the stored code (and warning ack) and return to the code entry
+  // page. The device lock stays in place, so logging back in on THIS computer is
+  // still recognised as the bound device.
+  function logout() {
+    chrome.storage.local.remove(["licenseCode", "ackWarn"], () => {
+      codeEl.value = "";
+      lockMsg.className = "status status--idle";
+      lockMsg.textContent = "A code is required. Ask the owner for one.";
+      showView("lock");
+    });
+  }
+
+  // Probe whether the sharing-protection store (Pantry) is reachable from this
+  // computer, so the owner can confirm the share-detection is actually live.
+  function pingConn() {
+    if (!shareConnEl) return;
+    shareConnEl.textContent = "checking…"; shareConnEl.className = "share-conn";
+    try {
+      chrome.runtime.sendMessage({ type: "pantryPing" }, (r) => {
+        if (chrome.runtime.lastError || !r) { shareConnEl.textContent = "can't check"; shareConnEl.className = "share-conn bad"; return; }
+        if (r.ok) { shareConnEl.textContent = "connected ✓"; shareConnEl.className = "share-conn ok"; }
+        else { shareConnEl.textContent = "unreachable ✗ (" + (r.reason || "error") + ")"; shareConnEl.className = "share-conn bad"; }
+      });
+    } catch (e) { shareConnEl.textContent = "can't check"; shareConnEl.className = "share-conn bad"; }
   }
 
   function activateCheck(jti, deviceId, label) {
@@ -176,5 +206,6 @@
   deltaEl.addEventListener("input", () => { chrome.storage.local.set({ delta: parseFloat(deltaEl.value) || 0.363 }); });
   revUrlEl.addEventListener("input", () => { chrome.storage.local.set({ revUrl: revUrlEl.value.trim() }); });
   resetDeltaEl.addEventListener("click", (e) => { e.preventDefault(); deltaEl.value = 0.363; chrome.storage.local.set({ delta: 0.363 }); });
-  deactivateEl.addEventListener("click", (e) => { e.preventDefault(); chrome.storage.local.remove("licenseCode", () => { codeEl.value = ""; showView("lock"); }); });
+  logoutEl.addEventListener("click", logout);
+  testConnEl.addEventListener("click", (e) => { e.preventDefault(); pingConn(); });
 })();

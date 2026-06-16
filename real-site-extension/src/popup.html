@@ -8,6 +8,7 @@
 </head>
 <body>
   <header>
+    <button id="logout" class="logout" hidden title="Log out and enter a different code">⎋ Log out</button>
     <h1>Wheel Picker</h1>
     <label class="switch" title="Enable / disable" id="enabledWrap" hidden>
       <input type="checkbox" id="enabled" /><span class="slider"></span>
@@ -50,8 +51,9 @@
         <span class="field-label">Revocation URL (your kill-list, from the generator)</span>
         <input type="text" id="revUrl" autocomplete="off" placeholder="https://gist.githubusercontent.com/…/raw/revoked.json" />
       </label>
-      <button id="resetDelta" class="link">reset to 0.363</button>
-      <button id="deactivate" class="link">remove activation</button>
+      <div class="share-status">Sharing protection: <span id="shareConn" class="share-conn">—</span></div>
+      <button id="testConn" class="link">test connection</button>
+      <button id="resetDelta" class="link">reset aim to 0.363</button>
     </details>
   </section>
 

@@ -45,6 +45,16 @@ input:checked + .slider::before { transform: translateX(20px); }
 
 .active-info { font-size: 11.5px; color: #86efac; margin-bottom: 10px; }
 
+/* top-left log-out button */
+.logout { background: var(--panel); color: var(--muted); border: 1px solid var(--border); border-radius: 6px; font-size: 11px; font-weight: 600; padding: 4px 9px; cursor: pointer; }
+.logout:hover { color: var(--text); border-color: var(--accent); }
+
+/* sharing-protection connection check (Advanced) */
+.share-status { font-size: 11.5px; color: var(--muted); margin-top: 10px; }
+.share-conn { font-weight: 700; color: var(--muted); }
+.share-conn.ok { color: #86efac; }
+.share-conn.bad { color: #fca5a5; }
+
 /* 3-strike warning */
 #warn { text-align: center; padding: 8px 4px 4px; }
 .warn-big { font-size: 26px; font-weight: 800; color: #fca5a5; margin: 6px 0 12px; }
