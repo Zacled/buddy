@@ -10,39 +10,60 @@
   let latestEntries = [];
   let pending = null;
 
-  function askRevoked(jti) {
+  function ctxAlive() {
+    try { return !!(chrome.runtime && chrome.runtime.id); } catch (e) { return false; }
+  }
+  // Tri-state checks: { ok:false } means we couldn't reach the background worker —
+  // most often because the extension was reloaded and this script is now an orphan
+  // on a tab that wasn't refreshed. We treat "can't confirm" as "do NOT rig".
+  function checkRevoked(jti) {
     return new Promise((resolve) => {
       try {
+        if (!ctxAlive()) return resolve({ ok: false });
         chrome.runtime.sendMessage({ type: "isRevoked", jti }, (resp) => {
-          if (chrome.runtime.lastError) resolve(false); // fail-open
-          else resolve(!!(resp && resp.revoked));
+          if (chrome.runtime.lastError || !resp) resolve({ ok: false });
+          else resolve({ ok: true, revoked: !!resp.revoked });
         });
-      } catch (e) { resolve(false); }
+      } catch (e) { resolve({ ok: false }); }
     });
   }
-  function codeDead(jti, deviceId) {
+  function checkStatus(jti, deviceId) {
     return new Promise((resolve) => {
       try {
+        if (!ctxAlive()) return resolve({ ok: false });
         chrome.runtime.sendMessage({ type: "codeStatus", jti, deviceId }, (r) => {
-          resolve(!chrome.runtime.lastError && r && (r.state === "dead" || r.state === "blocked"));
+          if (chrome.runtime.lastError || !r) resolve({ ok: false });
+          else resolve({ ok: true, state: r.state });
         });
-      } catch (e) { resolve(false); }
+      } catch (e) { resolve({ ok: false }); }
     });
   }
   async function isActivated() {
     try {
+      if (!ctxAlive()) return false; // extension reloaded/disabled -> stop rigging
       const c = await chrome.storage.local.get(["licenseCode", "deviceId"]);
       if (!c.licenseCode) return false;
       if (!(await self.WPLicense.verify(c.licenseCode))) return false; // bad sig or expired
       const inf = await self.WPLicense.info(c.licenseCode);
       if (inf && inf.dev && inf.dev !== c.deviceId) return false; // locked to another device
-      if (inf && inf.jti && (await askRevoked(inf.jti))) return false; // revoked by owner
-      if (inf && inf.jti && (await codeDead(inf.jti, c.deviceId))) return false; // auto-revoked / not the owner's computer
+      if (inf && inf.jti) {
+        const r = await checkRevoked(inf.jti);
+        if (!r.ok) return false;     // can't confirm revocation status -> fail-safe, don't rig
+        if (r.revoked) return false; // revoked by owner
+        const s = await checkStatus(inf.jti, c.deviceId);
+        if (s.ok && (s.state === "dead" || s.state === "blocked")) return false; // auto-revoked / other computer
+      }
       return true;
     } catch (e) { return false; }
   }
 
   async function push() {
+    // Orphaned (extension reloaded without refreshing this tab): actively tell the
+    // page to stop rigging instead of leaving it on a stale "activated" flag.
+    if (!ctxAlive()) {
+      window.postMessage({ [TAG]: true, dir: "to-main", type: "config", activated: false, enabled: true, forceIndex: -1, delta: 0.363 }, "*");
+      return;
+    }
     const c = await chrome.storage.local.get(["enabled", "forceIndex", "delta"]);
     const activated = await isActivated();
     window.postMessage({
