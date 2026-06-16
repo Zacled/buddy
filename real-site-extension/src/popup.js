@@ -1,5 +1,5 @@
 /* popup.js — activation gate + number-key controls, with the 3-strike
-   sharing-warning flow (lock / warn / main views). */
+   sharing-warning flow (lock / warn / main / denied views). */
 (function () {
   "use strict";
   const codeEl = document.getElementById("code");
@@ -9,7 +9,9 @@
   const warnSec = document.getElementById("warn");
   const warnNum = document.getElementById("warnNum");
   const proceedBtn = document.getElementById("proceedBtn");
-  const warnBanner = document.getElementById("warnBanner");
+  const warnFoot = document.getElementById("warnFoot");
+  const deniedSec = document.getElementById("denied");
+  const deniedLogoutEl = document.getElementById("deniedLogout");
   const mainSec = document.getElementById("main");
   const enabledWrap = document.getElementById("enabledWrap");
   const enabledEl = document.getElementById("enabled");
@@ -27,21 +29,21 @@
 
   function setStatus(kind, text) { statusEl.textContent = text; statusEl.className = "status status--" + kind; }
 
-  function showView(view) { // "lock" | "warn" | "main"
+  function showView(view) { // "lock" | "warn" | "main" | "denied"
     lockSec.hidden = view !== "lock";
     warnSec.hidden = view !== "warn";
     mainSec.hidden = view !== "main";
+    deniedSec.hidden = view !== "denied";
     enabledWrap.hidden = view !== "main";
-    logoutEl.hidden = view === "lock"; // the log-out button shows whenever a code is active
-    if (view !== "main") { document.body.classList.remove("warned"); warnBanner.hidden = true; }
+    // header log-out shows on main/warn; the denied screen has its own big button
+    logoutEl.hidden = (view === "lock" || view === "denied");
+    document.body.classList.toggle("denied", view === "denied");
   }
   function lock(text) { lockMsg.className = "status status--warn"; lockMsg.textContent = text; showView("lock"); }
-  function setWarnBanner(n) {
-    if (n > 0) {
-      warnBanner.hidden = false;
-      warnBanner.textContent = "⚠ Warning " + n + " of 3 — your code was used on another computer. One more and it's deactivated.";
-      document.body.classList.add("warned");
-    } else { warnBanner.hidden = true; document.body.classList.remove("warned"); }
+  // Small "Warning N/3" note at the bottom of the normal screen (no red takeover).
+  function setWarnFoot(n) {
+    if (n > 0) { warnFoot.hidden = false; warnFoot.textContent = "⚠ Warning " + n + "/3"; }
+    else { warnFoot.hidden = true; }
   }
 
   function render() {
@@ -74,7 +76,7 @@
       deltaEl.value = cfg.delta;
       revUrlEl.value = c.revUrl || "";
       showView("main");
-      setWarnBanner(warnN || 0);
+      setWarnFoot(warnN || 0);
       const info = c.licenseCode ? await window.WPLicense.info(c.licenseCode) : null;
       const el = document.getElementById("activeInfo");
       if (info && info.valid) {
@@ -101,7 +103,7 @@
     if (!ok) return lock("That code isn't valid. Check it and try again.");
     if (wrongDevice) return lock("This code is locked to a different device.");
     if (revoked) return lock("This code has been deactivated by the owner.");
-    if (result.status === "dead") return lock("This code has been deactivated (shared too many times).");
+    if (result.status === "dead") return showView("denied");
     if (result.status === "blocked") return lock("This code is already in use on another computer.");
     chrome.storage.local.set({ licenseCode: code }, () => enterMain(0));
   }
@@ -166,8 +168,8 @@
     });
   }
 
-  // Live re-check (on open, focus, every few seconds): locks on revoke/3rd-strike,
-  // unlocks on restore, keeps the red banner accurate.
+  // Live re-check (on open, focus, every few seconds): locks on revoke, shows the
+  // full-red Access Denied screen on the 3rd strike, keeps the bottom note accurate.
   function refreshState() {
     if (!warnSec.hidden) return; // don't disturb the warning screen
     chrome.storage.local.get(["licenseCode", "deviceId", "ackWarn"], async (c) => {
@@ -180,13 +182,13 @@
       if (!okSig) return lock("This code is no longer valid (expired or removed).");
       if (wrongDevice) return lock("This code is locked to a different device.");
       if (rev) return lock("This code has been deactivated by the owner.");
-      if (st.state === "dead") return lock("This code has been deactivated (shared too many times).");
+      if (st.state === "dead") return showView("denied");
       if (st.state === "blocked") return lock("This code is already in use on another computer.");
       const warnN = st.state === "warn" ? (st.n || 1) : 0;
       const ack = c.ackWarn || 0;
       if (warnN > ack) { currentWarnN = warnN; warnNum.textContent = warnN; showView("warn"); return; }
       if (mainSec.hidden) enterMain(warnN);
-      else setWarnBanner(warnN);
+      else setWarnFoot(warnN);
     });
   }
   refreshState();
@@ -207,5 +209,6 @@
   revUrlEl.addEventListener("input", () => { chrome.storage.local.set({ revUrl: revUrlEl.value.trim() }); });
   resetDeltaEl.addEventListener("click", (e) => { e.preventDefault(); deltaEl.value = 0.363; chrome.storage.local.set({ delta: 0.363 }); });
   logoutEl.addEventListener("click", logout);
+  deniedLogoutEl.addEventListener("click", logout);
   testConnEl.addEventListener("click", (e) => { e.preventDefault(); pingConn(); });
 })();

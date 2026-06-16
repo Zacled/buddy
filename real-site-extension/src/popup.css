@@ -61,8 +61,16 @@ input:checked + .slider::before { transform: translateX(20px); }
 .warn-text { font-size: 13px; color: #fecaca; line-height: 1.5; margin: 0 0 18px; }
 .btn-warn { width: 100%; background: #dc2626; color: #fff; border: none; font: inherit; font-weight: 700; padding: 11px; border-radius: 8px; cursor: pointer; }
 .btn-warn:hover { background: #b91c1c; }
-.warn-banner { background: #7f1d1d; color: #fecaca; border: 1px solid #dc2626; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; margin-bottom: 10px; }
-body.warned { box-shadow: inset 0 0 0 3px #dc2626; }
+/* small note at the bottom of the normal screen — not a red takeover */
+.warn-foot { margin-top: 14px; text-align: center; font-size: 12px; font-weight: 700; color: #fca5a5; }
+
+/* full-screen Access Denied (3rd strike) */
+body.denied { background: #7f1d1d; }
+#denied { text-align: center; padding: 22px 6px 10px; }
+.denied-big { font-size: 30px; font-weight: 800; color: #fff; margin: 8px 0 12px; }
+.denied-text { font-size: 14px; color: #fecaca; line-height: 1.5; margin: 0 0 22px; }
+.btn-denied { width: 100%; background: #fff; color: #7f1d1d; border: none; font: inherit; font-weight: 800; padding: 12px; border-radius: 8px; cursor: pointer; }
+.btn-denied:hover { background: #fee2e2; }
 .devbox { margin-top: 14px; padding: 10px; border: 1px dashed var(--border); border-radius: 8px; }
 .devbox-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
 .devbox-row { display: flex; align-items: center; gap: 8px; }
