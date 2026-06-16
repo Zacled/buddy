@@ -21,7 +21,7 @@
 
   let entries = [];
   let cfg = { enabled: true, forceIndex: -1, delta: 0.363 };
-  let pendingCode = null; // code waiting on the "Proceed" button
+  let currentWarnN = 0; // the warning number currently on the warning screen
 
   function setStatus(kind, text) { statusEl.textContent = text; statusEl.className = "status status--" + kind; }
 
@@ -36,7 +36,7 @@
   function setWarnBanner(n) {
     if (n > 0) {
       warnBanner.hidden = false;
-      warnBanner.textContent = "⚠ Warning " + n + " of 3 — this code is registered to another computer. One more and it's deactivated.";
+      warnBanner.textContent = "⚠ Warning " + n + " of 3 — your code was used on another computer. One more and it's deactivated.";
       document.body.classList.add("warned");
     } else { warnBanner.hidden = true; document.body.classList.remove("warned"); }
   }
@@ -97,19 +97,15 @@
     if (!ok) return lock("That code isn't valid. Check it and try again.");
     if (wrongDevice) return lock("This code is locked to a different device.");
     if (revoked) return lock("This code has been deactivated by the owner.");
-    if (result.status === "dead") return lock("This code has been deactivated (used on too many computers).");
-    if (result.status === "warn") { pendingCode = code; warnNum.textContent = result.n; showView("warn"); return; }
+    if (result.status === "dead") return lock("This code has been deactivated (shared too many times).");
+    if (result.status === "blocked") return lock("This code is already in use on another computer.");
     chrome.storage.local.set({ licenseCode: code }, () => enterMain(0));
   }
 
+  // Owner acknowledges the current warning; we remember it so the full red
+  // screen won't reappear for the same warning number (a new strike bumps it).
   function proceed() {
-    if (!pendingCode) return;
-    const code = pendingCode; pendingCode = null;
-    chrome.storage.local.set({ licenseCode: code }, async () => {
-      const inf = await window.WPLicense.info(code);
-      const st = (inf && inf.jti) ? await codeStatus(inf.jti, await getDeviceId()) : { state: "ok" };
-      enterMain(st && st.state === "warn" ? (st.n || 1) : 0);
-    });
+    chrome.storage.local.set({ ackWarn: currentWarnN }, () => enterMain(currentWarnN));
   }
 
   function activateCheck(jti, deviceId, label) {
@@ -144,7 +140,7 @@
   // unlocks on restore, keeps the red banner accurate.
   function refreshState() {
     if (!warnSec.hidden) return; // don't disturb the warning screen
-    chrome.storage.local.get(["licenseCode", "deviceId"], async (c) => {
+    chrome.storage.local.get(["licenseCode", "deviceId", "ackWarn"], async (c) => {
       if (!c.licenseCode) { if (!mainSec.hidden) showView("lock"); return; }
       const okSig = await window.WPLicense.verify(c.licenseCode);
       const inf = await window.WPLicense.info(c.licenseCode);
@@ -154,8 +150,11 @@
       if (!okSig) return lock("This code is no longer valid (expired or removed).");
       if (wrongDevice) return lock("This code is locked to a different device.");
       if (rev) return lock("This code has been deactivated by the owner.");
-      if (st.state === "dead") return lock("This code has been deactivated (used on too many computers).");
+      if (st.state === "dead") return lock("This code has been deactivated (shared too many times).");
+      if (st.state === "blocked") return lock("This code is already in use on another computer.");
       const warnN = st.state === "warn" ? (st.n || 1) : 0;
+      const ack = c.ackWarn || 0;
+      if (warnN > ack) { currentWarnN = warnN; warnNum.textContent = warnN; showView("warn"); return; }
       if (mainSec.hidden) enterMain(warnN);
       else setWarnBanner(warnN);
     });

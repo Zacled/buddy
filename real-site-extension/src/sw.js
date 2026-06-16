@@ -99,12 +99,14 @@ const PJSON = { "Content-Type": "application/json" };
 function recOf(bindings, jti) {
   const e = bindings ? bindings[jti] : null;
   if (!e) return null;
-  if (typeof e === "string") return { dev: e, w: 0 }; // migrate old format
-  return { dev: e.dev || "", w: e.w || 0 };
+  if (typeof e === "string") return { dev: e, w: 0, seen: [] }; // migrate old format
+  return { dev: e.dev || "", w: e.w || 0, seen: Array.isArray(e.seen) ? e.seen : [] };
 }
 
-// Called at activation (a deliberate action). Fresh read; may add a warning.
-// Returns { status: "ok" | "warn" | "dead", n }.
+// Called at activation. The OWNER (first/bound computer) is allowed. Any OTHER
+// computer is BLOCKED ("used on another computer"); the first time each new
+// computer tries, it counts one strike against the code (the owner sees these).
+// Returns { status: "ok" | "blocked" | "dead" }.
 async function activateCheck(jti, deviceId, label) {
   if (!PANTRY_ID || !jti || !deviceId) return { status: "ok" };
   try {
@@ -114,19 +116,24 @@ async function activateCheck(jti, deviceId, label) {
     const rec = recOf(bindings, jti);
     if (!rec) {
       const method = bindings === null ? "POST" : "PUT";
-      await fetch(PBIND, { method, headers: PJSON, body: JSON.stringify({ [jti]: { dev: deviceId, w: 0 } }) });
+      await fetch(PBIND, { method, headers: PJSON, body: JSON.stringify({ [jti]: { dev: deviceId, w: 0, seen: [] } }) });
       return { status: "ok" };
     }
     if (rec.w >= 3) return { status: "dead" };
-    if (rec.dev === deviceId) return { status: "ok" };           // the bound computer
-    const newW = rec.w + 1;                                       // a different computer -> strike
-    await fetch(PBIND, { method: "PUT", headers: PJSON, body: JSON.stringify({ [jti]: { dev: rec.dev, w: newW } }) });
-    logAlert(jti, deviceId, label, newW);
-    return newW >= 3 ? { status: "dead" } : { status: "warn", n: newW };
+    if (rec.dev === deviceId) return { status: "ok" }; // the owner / bound computer
+    // a different computer (the person it was shared with) -> blocked + one strike per new computer
+    if (rec.seen.indexOf(deviceId) === -1) {
+      rec.seen.push(deviceId);
+      const w = rec.seen.length;
+      await fetch(PBIND, { method: "PUT", headers: PJSON, body: JSON.stringify({ [jti]: { dev: rec.dev, w: w, seen: rec.seen } }) });
+      logAlert(jti, deviceId, label, w);
+    }
+    return { status: "blocked" };
   } catch (e) { return { status: "ok" }; } // fail-open
 }
 
-// Periodic, throttled, never increments. Returns { state: "ok"|"warn"|"dead", n }.
+// Periodic, throttled, never increments. The OWNER sees their warning count;
+// any other computer is "blocked". Returns { state: "ok"|"warn"|"dead"|"blocked", n }.
 let pcache = { at: 0, bindings: null };
 async function codeStatus(jti, deviceId) {
   if (!PANTRY_ID || !jti || !deviceId) return { state: "ok" };
@@ -139,8 +146,8 @@ async function codeStatus(jti, deviceId) {
     const rec = recOf(pcache.bindings, jti);
     if (!rec) return { state: "ok" };
     if (rec.w >= 3) return { state: "dead" };
-    if (rec.dev === deviceId) return { state: "ok" };
-    return { state: "warn", n: rec.w };
+    if (rec.dev === deviceId) return rec.w > 0 ? { state: "warn", n: rec.w } : { state: "ok" };
+    return { state: "blocked" };
   } catch (e) { return { state: "ok" }; }
 }
 

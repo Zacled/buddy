@@ -24,7 +24,7 @@
     return new Promise((resolve) => {
       try {
         chrome.runtime.sendMessage({ type: "codeStatus", jti, deviceId }, (r) => {
-          resolve(!chrome.runtime.lastError && r && r.state === "dead");
+          resolve(!chrome.runtime.lastError && r && (r.state === "dead" || r.state === "blocked"));
         });
       } catch (e) { resolve(false); }
     });
@@ -37,7 +37,7 @@
       const inf = await self.WPLicense.info(c.licenseCode);
       if (inf && inf.dev && inf.dev !== c.deviceId) return false; // locked to another device
       if (inf && inf.jti && (await askRevoked(inf.jti))) return false; // revoked by owner
-      if (inf && inf.jti && (await codeDead(inf.jti, c.deviceId))) return false; // auto-revoked (3 strikes)
+      if (inf && inf.jti && (await codeDead(inf.jti, c.deviceId))) return false; // auto-revoked / not the owner's computer
       return true;
     } catch (e) { return false; }
   }
