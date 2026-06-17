@@ -26,9 +26,10 @@
   const calActualEl = document.getElementById("calActual");
   const calFixEl = document.getElementById("calFix");
   const calMsgEl = document.getElementById("calMsg");
+  const varietyBtns = document.getElementById("varietyBtns");
 
   let entries = [];
-  let cfg = { enabled: true, forceIndex: -1, delta: 0.363 };
+  let cfg = { enabled: true, forceIndex: -1, delta: 0.363, wobble: 0.45 };
   let currentWarnN = 0; // the warning number currently on the warning screen
 
   function setStatus(kind, text) { statusEl.textContent = text; statusEl.className = "status status--" + kind; }
@@ -71,14 +72,22 @@
     });
   }
 
+  function renderVariety(w) {
+    Array.prototype.forEach.call(varietyBtns.querySelectorAll(".var-btn"), (b) => {
+      b.classList.toggle("on", Math.abs(parseFloat(b.dataset.w) - w) < 0.001);
+    });
+  }
+
   function enterMain(warnN) {
-    chrome.storage.local.get(["enabled", "forceIndex", "delta", "licenseCode", "revUrl"], async (c) => {
+    chrome.storage.local.get(["enabled", "forceIndex", "delta", "licenseCode", "revUrl", "wobble"], async (c) => {
       cfg.enabled = c.enabled !== false;
       cfg.forceIndex = typeof c.forceIndex === "number" ? c.forceIndex : -1;
       cfg.delta = typeof c.delta === "number" ? c.delta : 0.363;
+      cfg.wobble = typeof c.wobble === "number" ? c.wobble : 0.45;
       enabledEl.checked = cfg.enabled;
       deltaEl.value = cfg.delta;
       revUrlEl.value = c.revUrl || "";
+      renderVariety(cfg.wobble);
       showView("main");
       setWarnFoot(warnN || 0);
       const info = c.licenseCode ? await window.WPLicense.info(c.licenseCode) : null;
@@ -217,6 +226,14 @@
   testConnEl.addEventListener("click", (e) => { e.preventDefault(); pingConn(); });
   calFixEl.addEventListener("click", (e) => { e.preventDefault(); calibrate(); });
   calActualEl.addEventListener("keydown", (e) => { if (e.key === "Enter") calibrate(); });
+  varietyBtns.addEventListener("click", (e) => {
+    const b = e.target.closest(".var-btn"); if (!b) return;
+    const w = parseFloat(b.dataset.w);
+    if (!(w >= 0)) return;
+    cfg.wobble = w;
+    chrome.storage.local.set({ wobble: w });
+    renderVariety(w);
+  });
 
   // One-spin self-calibration: you pressed `aimed` but it landed on `actual`,
   // so the wheel's offset is off by (actual-aimed) slices. Nudge delta by that

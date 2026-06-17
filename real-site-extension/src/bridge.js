@@ -111,7 +111,7 @@
       hideWarn();
       return;
     }
-    const c = await chrome.storage.local.get(["enabled", "forceIndex", "delta", "ackWarn"]);
+    const c = await chrome.storage.local.get(["enabled", "forceIndex", "delta", "ackWarn", "wobble"]);
     const st = await evalState();
     window.postMessage({
       [TAG]: true, dir: "to-main", type: "config",
@@ -119,6 +119,7 @@
       enabled: c.enabled !== false,
       forceIndex: typeof c.forceIndex === "number" ? c.forceIndex : -1,
       delta: typeof c.delta === "number" ? c.delta : 0.363,
+      wobble: typeof c.wobble === "number" ? c.wobble : 0.45,
     }, "*");
     // big on-page warning for the owner whose code is being shared
     if (st.warnN > 0 && st.warnN > (c.ackWarn || 0)) showWarn(st.warnN);

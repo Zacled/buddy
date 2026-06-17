@@ -21,6 +21,14 @@ input:checked + .slider { background: var(--accent); }
 input:checked + .slider::before { transform: translateX(20px); }
 .adv, .help { margin-top: 14px; font-size: 12px; color: var(--muted); }
 .adv summary, .help summary { cursor: pointer; color: var(--text); }
+/* spin variety (wobble) */
+.variety { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+.variety-label { font-size: 12px; color: var(--muted); }
+.variety-btns { display: flex; gap: 4px; }
+.var-btn { background: var(--panel); color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; font-size: 11px; font-weight: 600; cursor: pointer; }
+.var-btn:hover { color: var(--text); }
+.var-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
 /* aim calibration */
 .calib-wrap { margin-top: 12px; font-size: 12px; color: var(--muted); }
 .calib-wrap summary { cursor: pointer; color: #5a9bff; }

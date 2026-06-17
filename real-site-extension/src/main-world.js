@@ -13,7 +13,7 @@
   "use strict";
 
   const TAG = "__wnrig";
-  const state = { activated: false, enabled: true, forceIndex: -1, delta: 0.363 };
+  const state = { activated: false, enabled: true, forceIndex: -1, delta: 0.363, wobble: 0.45 };
   let forceThisSpin = false;
   let curK = 0;
   let mathUntil = 0;
@@ -51,10 +51,15 @@
 
   function computeK(N, t) {
     if (!N) return 0;
-    // Aim for the CENTRE of the target slice. Landing dead-centre gives the most
-    // margin against any small offset error, so it stays on the right name even
-    // with lots of names — and it lets the one-spin calibration read cleanly.
-    const phi = t / N;
+    // Land somewhere inside the target slice. `wobble` (0..~0.9) is how much of the
+    // half-slice to randomly vary the resting spot: 0 = dead centre (most reliable),
+    // higher = more visible variation but needs the aim well-calibrated or it can
+    // tip into a neighbour. Winner = round(N*((u+delta) mod 1)), so staying within
+    // ±0.5/N of t/N keeps the same name.
+    const half = 0.5 / N;
+    const j = Math.max(0, Math.min(state.wobble, 0.9)) * half;
+    const offset = (realRandom() * 2 - 1) * j;
+    const phi = t / N + offset;
     return (((phi - state.delta) % 1) + 1) % 1;
   }
 
@@ -136,6 +141,7 @@
       if (typeof d.enabled === "boolean") state.enabled = d.enabled;
       if (typeof d.forceIndex === "number") state.forceIndex = d.forceIndex;
       if (typeof d.delta === "number" && d.delta > 0 && d.delta < 1) state.delta = d.delta;
+      if (typeof d.wobble === "number" && d.wobble >= 0 && d.wobble <= 1) state.wobble = d.wobble;
     } else if (d.type === "getEntries") {
       window.postMessage({ [TAG]: true, dir: "to-iso", type: "entries", entries: readEntries() }, "*");
     }
