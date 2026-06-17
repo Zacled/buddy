@@ -26,6 +26,7 @@
   const calActualEl = document.getElementById("calActual");
   const calFixEl = document.getElementById("calFix");
   const calMsgEl = document.getElementById("calMsg");
+  const preCalEl = document.getElementById("preCal");
   const varietyBtns = document.getElementById("varietyBtns");
 
   let entries = [];
@@ -226,6 +227,13 @@
   testConnEl.addEventListener("click", (e) => { e.preventDefault(); pingConn(); });
   calFixEl.addEventListener("click", (e) => { e.preventDefault(); calibrate(); });
   calActualEl.addEventListener("keydown", (e) => { if (e.key === "Enter") calibrate(); });
+  preCalEl.addEventListener("click", (e) => {
+    e.preventDefault();
+    chrome.storage.local.set({ startCal: Date.now() }, () => {
+      calMsgEl.textContent = "Opened the calibration panel on the wheelofnames tab — go there to finish.";
+      setTimeout(() => window.close(), 600);
+    });
+  });
   varietyBtns.addEventListener("click", (e) => {
     const b = e.target.closest(".var-btn"); if (!b) return;
     const w = parseFloat(b.dataset.w);

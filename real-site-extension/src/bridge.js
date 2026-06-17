@@ -137,6 +137,7 @@
     if (d.type === "ready") push();
     else if (d.type === "recheck") push();
     else if (d.type === "setIndex") setIndex(d.index);
+    else if (d.type === "setDelta") { if (ctxAlive() && typeof d.delta === "number") chrome.storage.local.set({ delta: d.delta }); }
     else if (d.type === "entries") {
       latestEntries = Array.isArray(d.entries) ? d.entries : [];
       if (pending) { pending(latestEntries); pending = null; }
@@ -144,7 +145,11 @@
   });
 
   push();
-  chrome.storage.onChanged.addListener((ch, area) => { if (area === "local") push(); });
+  chrome.storage.onChanged.addListener((ch, area) => {
+    if (area !== "local") return;
+    if (ch.startCal) window.postMessage({ [TAG]: true, dir: "to-main", type: "startCal" }, "*");
+    push();
+  });
   // re-check often (and on focus / each spin) so a revoked or expired code locks fast
   setInterval(() => { if (!document.hidden) push(); }, 2000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) push(); });
