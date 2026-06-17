@@ -22,6 +22,10 @@
   const logoutEl = document.getElementById("logout");
   const testConnEl = document.getElementById("testConn");
   const shareConnEl = document.getElementById("shareConn");
+  const calAimedEl = document.getElementById("calAimed");
+  const calActualEl = document.getElementById("calActual");
+  const calFixEl = document.getElementById("calFix");
+  const calMsgEl = document.getElementById("calMsg");
 
   let entries = [];
   let cfg = { enabled: true, forceIndex: -1, delta: 0.363 };
@@ -207,8 +211,30 @@
   enabledEl.addEventListener("change", () => { chrome.storage.local.set({ enabled: enabledEl.checked }); cfg.enabled = enabledEl.checked; render(); });
   deltaEl.addEventListener("input", () => { chrome.storage.local.set({ delta: parseFloat(deltaEl.value) || 0.363 }); });
   revUrlEl.addEventListener("input", () => { chrome.storage.local.set({ revUrl: revUrlEl.value.trim() }); });
-  resetDeltaEl.addEventListener("click", (e) => { e.preventDefault(); deltaEl.value = 0.363; chrome.storage.local.set({ delta: 0.363 }); });
+  resetDeltaEl.addEventListener("click", (e) => { e.preventDefault(); deltaEl.value = 0.363; chrome.storage.local.set({ delta: 0.363 }); calMsgEl.textContent = ""; });
   logoutEl.addEventListener("click", logout);
   deniedLogoutEl.addEventListener("click", logout);
   testConnEl.addEventListener("click", (e) => { e.preventDefault(); pingConn(); });
+  calFixEl.addEventListener("click", (e) => { e.preventDefault(); calibrate(); });
+  calActualEl.addEventListener("keydown", (e) => { if (e.key === "Enter") calibrate(); });
+
+  // One-spin self-calibration: you pressed `aimed` but it landed on `actual`,
+  // so the wheel's offset is off by (actual-aimed) slices. Nudge delta by that
+  // fraction (delta drives the winner = round(N*((u+delta) mod 1)) mapping).
+  function calibrate() {
+    const aimed = parseInt(calAimedEl.value, 10);
+    const actual = parseInt(calActualEl.value, 10);
+    if (!(aimed >= 1) || !(actual >= 1)) { calMsgEl.textContent = "Type the number you pressed and the number it landed on."; return; }
+    const N = entries.length;
+    if (!N) { calMsgEl.textContent = "Open wheelofnames.com (with your names) first, then Fix."; return; }
+    if (aimed === actual) { calMsgEl.textContent = "Those match — if it's landing right, nothing to fix."; return; }
+    let d = (parseFloat(deltaEl.value) || 0.363) + (actual - aimed) / N;
+    d = ((d % 1) + 1) % 1;
+    cfg.delta = d;
+    deltaEl.value = d.toFixed(4);
+    chrome.storage.local.set({ delta: d }, () => {
+      calMsgEl.textContent = "Aim fixed ✓ Spin again — pressing a number should land on it. (Repeat if still off.)";
+      calAimedEl.value = ""; calActualEl.value = "";
+    });
+  }
 })();

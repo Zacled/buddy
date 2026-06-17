@@ -40,6 +40,16 @@
       <div><span class="k">0</span> or <span class="k">Esc</span> &nbsp;fair spin</div>
     </div>
     <div id="status" class="status status--idle">Open wheelofnames.com to begin.</div>
+    <details class="calib-wrap">
+      <summary>Landed on the wrong name? Fix the aim</summary>
+      <p class="sub">Spin once, then tell it what happened — it recalibrates for your wheel.</p>
+      <div class="calib">
+        <span>I pressed</span><input type="number" id="calAimed" min="1" max="99" placeholder="#" />
+        <span>it landed on</span><input type="number" id="calActual" min="1" max="99" placeholder="#" />
+        <button id="calFix" class="calib-btn">Fix</button>
+      </div>
+      <div id="calMsg" class="calib-msg"></div>
+    </details>
     <details class="adv">
       <summary>Advanced</summary>
       <label class="field">

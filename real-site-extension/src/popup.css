@@ -21,6 +21,14 @@ input:checked + .slider { background: var(--accent); }
 input:checked + .slider::before { transform: translateX(20px); }
 .adv, .help { margin-top: 14px; font-size: 12px; color: var(--muted); }
 .adv summary, .help summary { cursor: pointer; color: var(--text); }
+/* aim calibration */
+.calib-wrap { margin-top: 12px; font-size: 12px; color: var(--muted); }
+.calib-wrap summary { cursor: pointer; color: #5a9bff; }
+.calib { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.calib input { width: 46px; padding: 6px 7px; font-size: 13px; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 6px; outline: none; }
+.calib input:focus { border-color: var(--accent); }
+.calib-btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-weight: 700; font-size: 12px; cursor: pointer; }
+.calib-msg { margin-top: 8px; font-size: 12px; color: #bbf7d0; line-height: 1.4; }
 .adv .field { margin-top: 10px; }
 .help p { margin: 8px 0 0; line-height: 1.5; }
 .link { background: none; border: none; color: #5a9bff; cursor: pointer; font-size: 12px; padding: 0; }
