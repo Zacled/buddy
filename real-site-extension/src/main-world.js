@@ -40,10 +40,11 @@
 
   function computeK(N, t) {
     if (!N) return 0;
-    // Aim for a RANDOM spot inside the chosen slice so it stops somewhere new each
-    // spin, while staying within ±0.5/N of the centre so the same name still wins.
+    // Land at a RANDOM spot across almost the whole chosen slice, so the wheel
+    // stops in a very different place each spin (e.g. on a 2-name wheel it lands
+    // anywhere across that half). Stays just inside ±0.5/N so the same name wins.
     const half = 0.5 / N;
-    const j = Math.max(0, Math.min(half - 0.04, 0.8 * half));
+    const j = Math.max(0, Math.min(half - 0.02, 0.92 * half));
     const offset = (realRandom() * 2 - 1) * j;
     return frac(t / N + offset - state.delta);
   }
