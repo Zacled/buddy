@@ -8,83 +8,28 @@
 </head>
 <body>
   <header>
-    <button id="logout" class="logout" hidden title="Log out and enter a different code">⎋ Log out</button>
     <h1>Wheel Picker</h1>
-    <label class="switch" title="Enable / disable" id="enabledWrap" hidden>
+    <label class="switch" title="Enable / disable" id="enabledWrap">
       <input type="checkbox" id="enabled" /><span class="slider"></span>
     </label>
   </header>
 
-  <section id="lock">
-    <p class="sub">Enter your activation code to unlock.</p>
+  <p class="sub">On <strong>wheelofnames.com</strong>, just press a number key:</p>
+  <div class="keys">
+    <div><span class="k">1</span>–<span class="k">9</span> &nbsp;that name wins (1 = first name)</div>
+    <div><span class="k">0</span> or <span class="k">Esc</span> &nbsp;fair spin</div>
+  </div>
+  <div id="status" class="status status--idle">Open wheelofnames.com to begin.</div>
+
+  <details class="adv">
+    <summary>Advanced</summary>
     <label class="field">
-      <span class="field-label">Activation code</span>
-      <input type="text" id="code" autocomplete="off" placeholder="Paste your code…" />
+      <span class="field-label">Aim offset (only change if a spin lands one name off)</span>
+      <input type="number" id="delta" min="0.05" max="0.95" step="0.005" />
     </label>
-    <button id="activate" class="btn">Activate</button>
-    <div id="lockMsg" class="status status--idle">A code is required. Ask the owner for one.</div>
-  </section>
+    <button id="resetDelta" class="link">reset to 0.363</button>
+  </details>
 
-  <section id="warn" hidden>
-    <div class="warn-big">⚠ Warning <span id="warnNum">1</span> of 3</div>
-    <p class="warn-text">Your code was used on another computer. Don't share it —
-      on the <b>3rd</b> time it's permanently deactivated for everyone.</p>
-    <button id="proceedBtn" class="btn btn-warn">Proceed</button>
-  </section>
-
-  <section id="main" hidden>
-    <div id="activeInfo" class="active-info"></div>
-    <p class="sub">On <strong>wheelofnames.com</strong>, just press a number key:</p>
-    <div class="keys">
-      <div><span class="k">1</span>–<span class="k">9</span> &nbsp;that position wins (1 = first name)</div>
-      <div><span class="k">0</span> or <span class="k">Esc</span> &nbsp;fair spin</div>
-    </div>
-    <div id="status" class="status status--idle">Open wheelofnames.com to begin.</div>
-    <div class="variety">
-      <span class="variety-label">Spin variety</span>
-      <div class="variety-btns" id="varietyBtns">
-        <button class="var-btn" data-w="0">None</button>
-        <button class="var-btn" data-w="0.25">Low</button>
-        <button class="var-btn" data-w="0.45">Med</button>
-        <button class="var-btn" data-w="0.7">High</button>
-      </div>
-    </div>
-    <details class="calib-wrap">
-      <summary>Landed on the wrong name? Fix the aim</summary>
-      <p class="sub">Set variety to None, spin once, then tell it what happened — it recalibrates for your wheel.</p>
-      <div class="calib">
-        <span>I pressed</span><input type="number" id="calAimed" min="1" max="99" placeholder="#" />
-        <span>it landed on</span><input type="number" id="calActual" min="1" max="99" placeholder="#" />
-        <button id="calFix" class="calib-btn">Fix</button>
-      </div>
-      <div id="calMsg" class="calib-msg"></div>
-      <button id="preCal" class="precal-btn">Precise calibrate (needed for Med/High variety) →</button>
-      <p class="sub">Opens a panel on the wheel page — spin ~6 times, type where it lands, and it nails the aim so variety stays on the right name.</p>
-    </details>
-    <details class="adv">
-      <summary>Advanced</summary>
-      <label class="field">
-        <span class="field-label">Aim offset (only change if a spin lands one name off)</span>
-        <input type="number" id="delta" min="0.05" max="0.95" step="0.005" />
-      </label>
-      <label class="field">
-        <span class="field-label">Revocation URL (your kill-list, from the generator)</span>
-        <input type="text" id="revUrl" autocomplete="off" placeholder="https://gist.githubusercontent.com/…/raw/revoked.json" />
-      </label>
-      <div class="share-status">Sharing protection: <span id="shareConn" class="share-conn">—</span></div>
-      <button id="testConn" class="link">test connection</button>
-      <button id="resetDelta" class="link">reset aim to 0.363</button>
-    </details>
-    <div id="warnFoot" class="warn-foot" hidden></div>
-  </section>
-
-  <section id="denied" hidden>
-    <div class="denied-big">⛔ Access Denied</div>
-    <p class="denied-text">You shared your code too much.</p>
-    <button id="deniedLogout" class="btn-denied">Log out</button>
-  </section>
-
-  <script src="license.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
