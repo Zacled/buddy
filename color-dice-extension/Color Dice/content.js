@@ -3,9 +3,13 @@
  *
  * online-dice.com RELOADS the page on every roll (the Game ID changes), so the
  * rig runs on page LOAD: it reads the blocked colours and recolours any die that
- * landed on one of them. Blocks ACCUMULATE — pressing a number key toggles that
- * colour on/off, so blocking red and then orange hides BOTH (red is not dropped
- * when you add another). Press 0 to clear everything.
+ * landed on one of them. Editing the block only ARMS it for your NEXT roll — the
+ * dice already on screen (the current roll + history) are left exactly as they
+ * are, so changing the block never visibly rewrites the result in front of you.
+ *
+ *   - Number keys block a SINGLE colour, replacing whatever was armed (press 1
+ *     and only red is blocked). Press 0 to clear.
+ *   - The popup can block SEVERAL colours at once (click to toggle each).
  *
  * Each blocked colour is swapped to one fixed, non-blocked replacement (using
  * the site's real shade, sampled off a genuine die) and applied to every
@@ -23,9 +27,15 @@
   // fallback shades (used only if the real colour can't be sampled off the page)
   const CSS = { red: "#e8261f", orange: "#f5921e", gold: "#f2c200", green: "#388c3e", blue: "#2f6fe0", purple: "#8e1b9b" };
 
-  // the set of blocked colours (accumulates; persisted in chrome.storage)
-  let blockedSet = [];
-  const isBlocked = (c) => blockedSet.indexOf(c) !== -1;
+  // Two sets, on purpose:
+  //  - activeSet : colours hidden on THIS page. Snapshotted at page load and then
+  //                never changed, so editing the block never alters the dice that
+  //                are already on screen (the current roll / history stay put).
+  //  - armedSet  : what will be hidden on your NEXT roll. Keys/popup edit this and
+  //                save it; it only takes effect when the page reloads (every roll).
+  let activeSet = [];
+  let armedSet = [];
+  const isBlocked = (c) => activeSet.indexOf(c) !== -1;
   // accept legacy single-string storage too, and always hand back a fresh array
   function normSet(v) {
     if (Array.isArray(v)) return v.filter((c) => COLORS.indexOf(c) !== -1);
@@ -174,7 +184,7 @@
       d.el.dataset.cdBucket = d.bucket;
       setColour(d, rc);
     });
-    try { console.log("[ColorDice] blocked:", blockedSet.join(",") || "(none)", "| squares:", found.length); } catch (e) {}
+    try { console.log("[ColorDice] active:", activeSet.join(",") || "(none)", "armed:", armedSet.join(",") || "(none)", "| squares:", found.length); } catch (e) {}
   }
 
   function init() {
@@ -183,25 +193,25 @@
 
     try {
       chrome.storage.local.get("blocked", (c) => {
-        blockedSet = normSet(c && c.blocked);
+        activeSet = normSet(c && c.blocked);  // freeze what this page hides...
+        armedSet = activeSet.slice();         // ...and start editing from the same set
         applyRig();
         [120, 350, 700, 1300, 2200, 3500].forEach((ms) => setTimeout(applyRig, ms));
       });
+      // edits made elsewhere (popup, another tab) only change what's armed for the
+      // next roll — they must NOT re-rig the dice already on this page.
       chrome.storage.onChanged.addListener((ch, area) => {
-        if (area === "local" && ch.blocked) { blockedSet = normSet(ch.blocked.newValue); applyRig(); }
+        if (area === "local" && ch.blocked) armedSet = normSet(ch.blocked.newValue);
       });
     } catch (e) {}
 
-    function save() { try { chrome.storage.local.set({ blocked: blockedSet.slice() }); } catch (x) {} }
+    function save() { try { chrome.storage.local.set({ blocked: armedSet.slice() }); } catch (x) {} }
 
+    // Number keys arm a SINGLE colour (replacing whatever was armed); 0 clears.
+    // No re-rig here — it takes effect on the next roll, leaving the current dice be.
     document.addEventListener("keydown", function (e) {
-      if (KEYMAP[e.key]) {
-        const c = KEYMAP[e.key], i = blockedSet.indexOf(c);
-        if (i === -1) blockedSet.push(c); else blockedSet.splice(i, 1); // toggle on/off
-        save(); applyRig();
-      } else if (e.key === "0") {
-        if (blockedSet.length) { blockedSet = []; save(); applyRig(); }  // clear all
-      }
+      if (KEYMAP[e.key]) { armedSet = [KEYMAP[e.key]]; save(); }
+      else if (e.key === "0") { armedSet = []; save(); }
     });
 
     try {
