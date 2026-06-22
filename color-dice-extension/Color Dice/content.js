@@ -1,17 +1,18 @@
 /*
- * Color Dice — hide one chosen colour on online-dice.com colour dice.
+ * Color Dice — hide one or more chosen colours on online-dice.com colour dice.
  *
  * online-dice.com RELOADS the page on every roll (the Game ID changes), so the
- * rig runs on page LOAD: it reads the armed colour and recolours any die that
- * landed on it. Pressing a number key / using the popup only ARMS a colour
- * (saved in the extension); it takes effect on your next roll (= next reload),
- * never on the dice already on screen.
+ * rig runs on page LOAD: it reads the blocked colours and recolours any die that
+ * landed on one of them. Blocks ACCUMULATE — pressing a number key toggles that
+ * colour on/off, so blocking red and then orange hides BOTH (red is not dropped
+ * when you add another). Press 0 to clear everything.
  *
- * The blocked colour is swapped to ONE fixed replacement (chosen per page load)
- * and applied to every die-square on the page — the main roll AND the squares in
- * "YOUR LAST 20 ROLLS" (THIS ROLL / PREVIOUS ROLLS) and the STATS row — so the
- * history always matches the rolled dice instead of revealing the real colour.
- *   1 red · 2 orange · 3 yellow · 4 green · 5 blue · 6 purple · 0 none
+ * Each blocked colour is swapped to one fixed, non-blocked replacement (using
+ * the site's real shade, sampled off a genuine die) and applied to every
+ * die-square on the page — the main roll AND the squares in "YOUR LAST 20 ROLLS"
+ * (THIS ROLL / PREVIOUS ROLLS) and the STATS row — so the history always matches
+ * the rolled dice instead of revealing a real, blocked colour.
+ *   1 red · 2 orange · 3 yellow · 4 green · 5 blue · 6 purple · 0 clear all
  */
 (function () {
   if (window.__colorDiceLoaded) return;
@@ -21,14 +22,25 @@
   const KEYMAP = { "1": "red", "2": "orange", "3": "gold", "4": "green", "5": "blue", "6": "purple" };
   // fallback shades (used only if the real colour can't be sampled off the page)
   const CSS = { red: "#e8261f", orange: "#f5921e", gold: "#f2c200", green: "#388c3e", blue: "#2f6fe0", purple: "#8e1b9b" };
-  let blocked = null;
 
-  // one fixed replacement per blocked colour, chosen once per page load — so the
-  // same blocked die shows the SAME colour on the table and in the history.
+  // the set of blocked colours (accumulates; persisted in chrome.storage)
+  let blockedSet = [];
+  const isBlocked = (c) => blockedSet.indexOf(c) !== -1;
+  // accept legacy single-string storage too, and always hand back a fresh array
+  function normSet(v) {
+    if (Array.isArray(v)) return v.filter((c) => COLORS.indexOf(c) !== -1);
+    if (typeof v === "string" && v) return COLORS.indexOf(v) !== -1 ? [v] : [];
+    return [];
+  }
+
+  // one fixed replacement per blocked colour — chosen from the colours that are
+  // NOT blocked, so a hidden colour never maps onto another hidden colour. Kept
+  // stable per page load so every die of that colour swaps to the same thing.
   const repl = {};
   function replacementFor(c) {
-    if (!repl[c]) {
-      const pool = COLORS.filter((x) => x !== c);
+    const pool = COLORS.filter((x) => !isBlocked(x));
+    if (!pool.length) return null;                       // everything blocked: give up
+    if (!repl[c] || pool.indexOf(repl[c]) === -1) {      // (re)pick if invalid/now-blocked
       repl[c] = pool[Math.floor(Math.random() * pool.length)];
     }
     return repl[c];
@@ -126,21 +138,43 @@
     return palette[name] || CSS[name];            // real shade if known, else fallback
   }
 
+  // paint a square the given colour, but only when it isn't already showing it.
+  // The guard compares the square's CURRENT colour bucket to the target, so the
+  // rig (which re-runs on every DOM mutation) neither rewrites identical styles
+  // — avoiding a ping-pong with the MutationObserver — nor misses a square the
+  // site has just re-rendered back to a real colour.
+  function setColour(d, bucketName) {
+    if (!bucketName || d.bucket === bucketName) return;
+    d.el.style.setProperty(d.prop, colourFor(bucketName), "important");
+    d.bucket = bucketName;
+  }
+
   function applyRig() {
-    if (!blocked) return;
     const found = dice();
     samplePalette(found);                          // learn the site's shades first
-    const pick = colourFor(replacementFor(blocked));
     found.forEach((d) => {
-      if (d.el.dataset.cdRigged) {                 // re-apply so earlier swaps stay
-        d.el.style.setProperty(d.prop, pick, "important"); // in sync as we learn the shade
+      // a square we already swapped: keep it hidden if its colour is still
+      // blocked; if its colour was un-blocked, restore the real colour & forget.
+      if (d.el.dataset.cdRigged) {
+        const orig = d.el.dataset.cdBucket;
+        if (orig && isBlocked(orig)) {
+          setColour(d, replacementFor(orig));
+        } else {
+          setColour(d, orig);
+          delete d.el.dataset.cdRigged;
+          delete d.el.dataset.cdBucket;
+        }
         return;
       }
-      if (d.bucket !== blocked) return;
-      d.el.style.setProperty(d.prop, pick, "important");
+      // a genuine square whose colour is blocked: swap it and remember what it was
+      if (!isBlocked(d.bucket)) return;
+      const rc = replacementFor(d.bucket);
+      if (!rc) return;
       d.el.dataset.cdRigged = "1";
+      d.el.dataset.cdBucket = d.bucket;
+      setColour(d, rc);
     });
-    try { console.log("[ColorDice] blocked:", blocked, "->", replacementFor(blocked), pick, "| squares:", found.length); } catch (e) {}
+    try { console.log("[ColorDice] blocked:", blockedSet.join(",") || "(none)", "| squares:", found.length); } catch (e) {}
   }
 
   function init() {
@@ -149,18 +183,25 @@
 
     try {
       chrome.storage.local.get("blocked", (c) => {
-        blocked = (c && c.blocked) || null;
+        blockedSet = normSet(c && c.blocked);
         applyRig();
         [120, 350, 700, 1300, 2200, 3500].forEach((ms) => setTimeout(applyRig, ms));
       });
       chrome.storage.onChanged.addListener((ch, area) => {
-        if (area === "local" && ch.blocked) blocked = ch.blocked.newValue || null;
+        if (area === "local" && ch.blocked) { blockedSet = normSet(ch.blocked.newValue); applyRig(); }
       });
     } catch (e) {}
 
+    function save() { try { chrome.storage.local.set({ blocked: blockedSet.slice() }); } catch (x) {} }
+
     document.addEventListener("keydown", function (e) {
-      if (KEYMAP[e.key]) { blocked = KEYMAP[e.key]; try { chrome.storage.local.set({ blocked: blocked }); } catch (x) {} }
-      else if (e.key === "0") { blocked = null; try { chrome.storage.local.set({ blocked: null }); } catch (x) {} }
+      if (KEYMAP[e.key]) {
+        const c = KEYMAP[e.key], i = blockedSet.indexOf(c);
+        if (i === -1) blockedSet.push(c); else blockedSet.splice(i, 1); // toggle on/off
+        save(); applyRig();
+      } else if (e.key === "0") {
+        if (blockedSet.length) { blockedSet = []; save(); applyRig(); }  // clear all
+      }
     });
 
     try {
