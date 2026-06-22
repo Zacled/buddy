@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Free VPN for Chrome - VPN Proxy VeePN",
+  "version": "4.1.2",
+  "description": "Fast, ultra secure, and easy to use VPN service to protect your privacy online. Enjoy Unlimited Traffic and Bandwidth!",
+  "icons": {
+    "16": "icon-16x16.png",
+    "48": "icon-48x48.png",
+    "128": "icon-128x128.png"
+  },
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Free VPN for Chrome - VPN Proxy VeePN",
+    "default_icon": {
+      "16": "icon-16x16.png",
+      "48": "icon-48x48.png",
+      "128": "icon-128x128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.online-dice.com/roll-color-dice/*"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="popup.css" />
+  <title>Color Dice</title>
+</head>
+<body>
+  <h1>Color Dice</h1>
+  <p class="sub">Pick a color to block. It gets swapped out only when it lands on your <strong>next roll</strong>.</p>
+
+  <div class="grid">
+    <button class="c" data-c="red"    style="--c:#e23b3b">Red</button>
+    <button class="c" data-c="orange" style="--c:#f08c1d">Orange</button>
+    <button class="c" data-c="gold"   style="--c:#e8b800">Yellow</button>
+    <button class="c" data-c="green"  style="--c:#21a84a">Green</button>
+    <button class="c" data-c="blue"   style="--c:#3b82f6">Blue</button>
+    <button class="c" data-c="purple" style="--c:#9333ea">Purple</button>
+  </div>
+
+  <button id="none" class="none">Block nothing (reset)</button>
+
+  <div id="status" class="status">Nothing blocked.</div>
+  <div id="hint" class="hint"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
