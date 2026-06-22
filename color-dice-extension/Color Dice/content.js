@@ -11,11 +11,12 @@
  *     and only red is blocked). Press 0 to clear.
  *   - The popup can block SEVERAL colours at once (click to toggle each).
  *
- * Each blocked colour is swapped to one fixed, non-blocked replacement (using
- * the site's real shade, sampled off a genuine die) and applied to every
- * die-square on the page — the main roll AND the squares in "YOUR LAST 20 ROLLS"
- * (THIS ROLL / PREVIOUS ROLLS) and the STATS row — so the history always matches
- * the rolled dice instead of revealing a real, blocked colour.
+ * Each blocked die is swapped to a non-blocked replacement (using the site's real
+ * shade, sampled off a genuine die) applied to every die-square on the page — the
+ * main roll AND the squares in "YOUR LAST 20 ROLLS" (THIS ROLL / PREVIOUS ROLLS)
+ * and the STATS row. The replacement is varied by the die's position in its row,
+ * so several blocked dice in a roll become DIFFERENT colours rather than all the
+ * same, while a table die and its history twin still match (same roll+position).
  *   1 red · 2 orange · 3 yellow · 4 green · 5 blue · 6 purple · 0 clear all
  */
 (function () {
@@ -43,17 +44,26 @@
     return [];
   }
 
-  // one fixed replacement per blocked colour — chosen from the colours that are
-  // NOT blocked, so a hidden colour never maps onto another hidden colour. Kept
-  // stable per page load so every die of that colour swaps to the same thing.
-  const repl = {};
-  function replacementFor(c) {
+  // Pick a replacement for a blocked die. Chosen from the colours that are NOT
+  // blocked (so a hidden colour never maps onto another hidden colour) and varied
+  // by the die's POSITION in its row — so several blocked dice in one roll swap to
+  // DIFFERENT colours instead of all the same. It's deterministic in
+  // (colour, position, per-load salt), so a die on the table and its twin in the
+  // history (same roll, same position) always swap to the SAME colour and match.
+  const SALT = (Math.random() * 1e9) | 0;
+  function hashStr(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function replacementForDie(c, pos) {
     const pool = COLORS.filter((x) => !isBlocked(x));
     if (!pool.length) return null;                       // everything blocked: give up
-    if (!repl[c] || pool.indexOf(repl[c]) === -1) {      // (re)pick if invalid/now-blocked
-      repl[c] = pool[Math.floor(Math.random() * pool.length)];
-    }
-    return repl[c];
+    // walk the pool by position from a per-colour start, so consecutive positions
+    // land on DISTINCT colours — blocked dice of the same colour in one roll never
+    // all look the same (until the pool is exhausted).
+    const start = hashStr(c + ":" + SALT) % pool.length;
+    return pool[(start + pos) % pool.length];
   }
 
   // classify an "rgb(...)" string into one of the 6 buckets by hue
@@ -159,16 +169,37 @@
     d.bucket = bucketName;
   }
 
+  // group dice into visual rows (by top edge) and index each one left-to-right, so
+  // a die's "position in its roll" can drive a varied-but-consistent replacement.
+  // A table die and its history twin sit in different rows but at the same index,
+  // so they resolve to the same colour; dice at different indexes can differ.
+  function assignPositions(found) {
+    const rows = [];
+    found.forEach((d) => {
+      const r = d.el.getBoundingClientRect();
+      d._left = r.left;
+      let row = null;
+      for (let i = 0; i < rows.length; i++) { if (Math.abs(rows[i].top - r.top) <= 14) { row = rows[i]; break; } }
+      if (!row) { row = { top: r.top, items: [] }; rows.push(row); }
+      row.items.push(d);
+    });
+    rows.forEach((row) => {
+      row.items.sort((a, b) => a._left - b._left);
+      row.items.forEach((d, i) => { d.pos = i; });
+    });
+  }
+
   function applyRig() {
     const found = dice();
     samplePalette(found);                          // learn the site's shades first
+    assignPositions(found);                        // index each die within its row
     found.forEach((d) => {
       // a square we already swapped: keep it hidden if its colour is still
       // blocked; if its colour was un-blocked, restore the real colour & forget.
       if (d.el.dataset.cdRigged) {
         const orig = d.el.dataset.cdBucket;
         if (orig && isBlocked(orig)) {
-          setColour(d, replacementFor(orig));
+          setColour(d, replacementForDie(orig, d.pos));
         } else {
           setColour(d, orig);
           delete d.el.dataset.cdRigged;
@@ -178,7 +209,7 @@
       }
       // a genuine square whose colour is blocked: swap it and remember what it was
       if (!isBlocked(d.bucket)) return;
-      const rc = replacementFor(d.bucket);
+      const rc = replacementForDie(d.bucket, d.pos);
       if (!rc) return;
       d.el.dataset.cdRigged = "1";
       d.el.dataset.cdBucket = d.bucket;
