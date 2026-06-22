@@ -7,9 +7,11 @@
  * dice already on screen (the current roll + history) are left exactly as they
  * are, so changing the block never visibly rewrites the result in front of you.
  *
- *   - Number keys 1-6 TOGGLE a colour in the block (press 1 to block red, press 1
- *     again to unblock it). Blocking a new colour KEEPS the others. Press 0 to clear.
- *   - The popup does the same (click to toggle each colour).
+ *   - Only ONE colour is blocked at a time. Pressing a number key (or clicking a
+ *     popup colour) blocks just that colour and drops whatever was blocked before
+ *     (press 1 for red, then 3 for yellow, and only yellow is blocked). Press 0 to
+ *     clear.
+ *   - The popup does the same (click a colour to switch to it).
  *
  * Each blocked die is swapped to a non-blocked replacement (using the site's real
  * shade, sampled off a genuine die) applied to every die-square on the page — the
@@ -238,15 +240,12 @@
 
     function save() { try { chrome.storage.local.set({ blocked: armedSet.slice() }); } catch (x) {} }
 
-    // Number keys TOGGLE a colour in the armed set (blocking a new one keeps the
-    // rest); 0 clears. No re-rig here — it takes effect on the next roll, leaving
-    // the dice currently on screen untouched.
+    // Only ONE colour is blocked at a time: a number key blocks just that colour
+    // and drops whatever was blocked before; 0 clears. No re-rig here — it takes
+    // effect on the next roll, leaving the dice currently on screen untouched.
     document.addEventListener("keydown", function (e) {
-      if (KEYMAP[e.key]) {
-        const c = KEYMAP[e.key], i = armedSet.indexOf(c);
-        if (i === -1) armedSet.push(c); else armedSet.splice(i, 1);
-        save();
-      } else if (e.key === "0") { armedSet = []; save(); }
+      if (KEYMAP[e.key]) { armedSet = [KEYMAP[e.key]]; save(); }
+      else if (e.key === "0") { armedSet = []; save(); }
     });
 
     try {

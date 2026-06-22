@@ -1,5 +1,6 @@
-/* popup.js — shows/sets the blocked colours (synced with the page via chrome.storage).
- * Blocks accumulate: clicking a colour toggles it; multiple can be blocked at once. */
+/* popup.js — shows/sets the blocked colour (synced with the page via chrome.storage).
+ * One colour at a time: clicking a colour blocks just that one and drops the rest;
+ * clicking the already-blocked colour (or "Clear") blocks nothing. */
 (function () {
   "use strict";
   const NAMES = { red: "Red", orange: "Orange", gold: "Yellow", green: "Green", blue: "Blue", purple: "Purple" };
@@ -19,7 +20,7 @@
     document.querySelectorAll(".c").forEach((b) => b.classList.toggle("on", set.indexOf(b.dataset.c) !== -1));
     if (set.length) {
       const names = ORDER.filter((c) => set.indexOf(c) !== -1).map((c) => NAMES[c]).join(", ");
-      statusEl.innerHTML = '🚫 Blocking <b>' + names + '</b> — swapped out on your next roll. Click again to unblock.';
+      statusEl.innerHTML = '🚫 Blocking <b>' + names + '</b> — swapped out on your next roll. Click it again to unblock.';
       statusEl.className = "status on";
     } else {
       statusEl.textContent = "Nothing blocked — every color rolls normally.";
@@ -27,13 +28,14 @@
     }
   }
 
-  function toggle(color) {
+  // block only the chosen colour (replacing whatever was blocked); clicking the
+  // colour that's already the sole block clears it.
+  function setOnly(color) {
     chrome.storage.local.get("blocked", (c) => {
       const set = normSet(c && c.blocked);
-      const i = set.indexOf(color);
-      if (i === -1) set.push(color); else set.splice(i, 1);
-      chrome.storage.local.set({ blocked: set });
-      render(set);
+      const next = (set.length === 1 && set[0] === color) ? [] : [color];
+      chrome.storage.local.set({ blocked: next });
+      render(next);
     });
   }
 
@@ -46,7 +48,7 @@
   chrome.storage.local.get("blocked", (c) => render(c && c.blocked));
 
   document.querySelectorAll(".c").forEach((b) => {
-    b.addEventListener("click", () => toggle(b.dataset.c));
+    b.addEventListener("click", () => setOnly(b.dataset.c));
   });
   document.getElementById("none").addEventListener("click", clearAll);
 
