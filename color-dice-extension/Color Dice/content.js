@@ -19,8 +19,8 @@
 
   const COLORS = ["red", "orange", "gold", "green", "blue", "purple"];
   const KEYMAP = { "1": "red", "2": "orange", "3": "gold", "4": "green", "5": "blue", "6": "purple" };
-  // vivid replacements (close to the site's dice colours)
-  const CSS = { red: "#e8261f", orange: "#f5921e", gold: "#f2c200", green: "#1f9e3a", blue: "#2f6fe0", purple: "#8e1b9b" };
+  // fallback shades (used only if the real colour can't be sampled off the page)
+  const CSS = { red: "#e8261f", orange: "#f5921e", gold: "#f2c200", green: "#388c3e", blue: "#2f6fe0", purple: "#8e1b9b" };
   let blocked = null;
 
   // one fixed replacement per blocked colour, chosen once per page load — so the
@@ -67,13 +67,14 @@
       if (bg) {
         const r = el.getBoundingClientRect();
         const area = r.width * r.height;
-        if (area > bestArea) { best = { el: el, prop: "background-color", bucket: bg }; bestArea = area; }
+        if (area > bestArea) { best = { el: el, prop: "background-color", bucket: bg, raw: cs.backgroundColor }; bestArea = area; }
       }
     }
     if (best) return best;
     for (const el of els) {
-      const fg = bucketOf(getComputedStyle(el).color);
-      if (fg) return { el: el, prop: "color", bucket: fg };
+      const cs = getComputedStyle(el);
+      const fg = bucketOf(cs.color);
+      if (fg) return { el: el, prop: "color", bucket: fg, raw: cs.color };
     }
     return null;
   }
@@ -98,28 +99,48 @@
       if (el.classList && el.classList.contains("__cd_die")) return;
       if (el.querySelector("img")) return;                  // avatars / badges
       if (/[a-z0-9]/i.test(el.textContent || "")) return;   // labels, names, counts
-      const bucket = bucketOf(getComputedStyle(el).backgroundColor);
+      const cs = getComputedStyle(el);
+      const bucket = bucketOf(cs.backgroundColor);
       if (!bucket) return;
       const r = el.getBoundingClientRect();
       if (r.width < 20 || r.width > 150 || r.height < 20 || r.height > 150) return;
       const ratio = r.width / r.height;
       if (ratio < 0.6 || ratio > 1.7) return;               // roughly square
-      add({ el: el, prop: "background-color", bucket: bucket });
+      add({ el: el, prop: "background-color", bucket: bucket, raw: cs.backgroundColor });
     });
 
     return out;
   }
 
+  // exact colour string sampled from a genuine die of each bucket, so our swap
+  // uses the site's real shade (and matches whatever theme is selected) instead
+  // of a hardcoded guess that can look a touch lighter/darker than the real one.
+  const palette = {};
+  function samplePalette(found) {
+    found.forEach((d) => {
+      if (d.el.dataset.cdRigged) return;          // never learn from our own swaps
+      if (d.raw && !palette[d.bucket]) palette[d.bucket] = d.raw;
+    });
+  }
+  function colourFor(name) {
+    return palette[name] || CSS[name];            // real shade if known, else fallback
+  }
+
   function applyRig() {
     if (!blocked) return;
-    const pick = CSS[replacementFor(blocked)]; // one colour for every blocked die
     const found = dice();
+    samplePalette(found);                          // learn the site's shades first
+    const pick = colourFor(replacementFor(blocked));
     found.forEach((d) => {
-      if (d.bucket !== blocked || d.el.dataset.cdDone === blocked) return;
+      if (d.el.dataset.cdRigged) {                 // re-apply so earlier swaps stay
+        d.el.style.setProperty(d.prop, pick, "important"); // in sync as we learn the shade
+        return;
+      }
+      if (d.bucket !== blocked) return;
       d.el.style.setProperty(d.prop, pick, "important");
-      d.el.dataset.cdDone = blocked; // don't recolour the same element twice
+      d.el.dataset.cdRigged = "1";
     });
-    try { console.log("[ColorDice] blocked:", blocked, "->", replacementFor(blocked), "| squares:", found.length, found.map((d) => d.bucket)); } catch (e) {}
+    try { console.log("[ColorDice] blocked:", blocked, "->", replacementFor(blocked), pick, "| squares:", found.length); } catch (e) {}
   }
 
   function init() {
