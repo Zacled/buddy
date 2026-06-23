@@ -1,24 +1,25 @@
 /*
- * Color Dice — hide one or more chosen colours on online-dice.com colour dice.
+ * Color Dice — hide a chosen colour on online-dice.com colour dice.
  *
- * online-dice.com RELOADS the page on every roll (the Game ID changes), so the
- * rig runs on page LOAD: it reads the blocked colours and recolours any die that
- * landed on one of them. Editing the block only ARMS it for your NEXT roll — the
- * dice already on screen (the current roll + history) are left exactly as they
- * are, so changing the block never visibly rewrites the result in front of you.
+ * online-dice.com RELOADS the page on every roll, and re-renders the history from
+ * its own (real) data, so the rig runs on page LOAD.
  *
- *   - Only ONE colour is blocked at a time. Pressing a number key (or clicking a
- *     popup colour) blocks just that colour and drops whatever was blocked before
- *     (press 1 for red, then 3 for yellow, and only yellow is blocked). Press 0 to
- *     clear.
- *   - The popup does the same (click a colour to switch to it).
+ *   - Only ONE colour is blocked at a time, for your NEXT roll. Pressing a number
+ *     key (or clicking a popup colour) blocks just that colour and drops whatever
+ *     was blocked before (press 1 for red, then 3 for yellow → only yellow).
+ *   - Editing the block never rewrites the dice already on screen — it takes
+ *     effect on your next roll.
  *
- * Each blocked die is swapped to a non-blocked replacement (using the site's real
- * shade, sampled off a genuine die) applied to every die-square on the page — the
- * main roll AND the squares in "YOUR LAST 20 ROLLS" (THIS ROLL / PREVIOUS ROLLS)
- * and the STATS row. The replacement is varied by the die's position in its row,
- * so several blocked dice in a roll become DIFFERENT colours rather than all the
- * same, while a table die and its history twin still match (same roll+position).
+ * PER-ROLL MEMORY: the first time a roll is seen, we "bake" its displayed colours
+ * (hiding whatever is blocked at that moment) and remember them, keyed by the
+ * roll's REAL colours. On every later load we replay that exact result. So a past
+ * roll KEEPS its fake colours even after you switch to blocking a different colour
+ * — the roll where you blocked red keeps hiding red, while new rolls hide the new
+ * colour. Press 0 (or "Clear all") to forget every faked roll and show real again.
+ *
+ * Hidden dice are swapped to the site's real shade (sampled off a genuine die) and
+ * varied by position, so several hidden dice in a roll differ, while a table die
+ * and its history twin (same roll + position) match.
  *   1 red · 2 orange · 3 yellow · 4 green · 5 blue · 6 purple · 0 clear all
  */
 (function () {
@@ -30,42 +31,57 @@
   // fallback shades (used only if the real colour can't be sampled off the page)
   const CSS = { red: "#e8261f", orange: "#f5921e", gold: "#f2c200", green: "#388c3e", blue: "#2f6fe0", purple: "#8e1b9b" };
 
-  // Two sets, on purpose:
-  //  - activeSet : colours hidden on THIS page. Snapshotted at page load and then
-  //                never changed, so editing the block never alters the dice that
-  //                are already on screen (the current roll / history stay put).
-  //  - armedSet  : what will be hidden on your NEXT roll. Keys/popup edit this and
-  //                save it; it only takes effect when the page reloads (every roll).
-  let activeSet = [];
-  let armedSet = [];
-  const isBlocked = (c) => activeSet.indexOf(c) !== -1;
-  // accept legacy single-string storage too, and always hand back a fresh array
-  function normSet(v) {
-    if (Array.isArray(v)) return v.filter((c) => COLORS.indexOf(c) !== -1);
-    if (typeof v === "string" && v) return COLORS.indexOf(v) !== -1 ? [v] : [];
-    return [];
+  // the single colour armed for your NEXT roll (selecting another replaces it)
+  let armed = null;
+
+  // Per-roll memory: signature (a roll's real colours, joined) -> displayed colours.
+  let fakeMap = {};      // sig -> array of colour names actually shown
+  let fakeList = [];     // sigs in insertion order, for pruning
+  let fakesDirty = false;
+  const FAKE_CAP = 300;
+
+  function loadFakes(v) {
+    fakeMap = {}; fakeList = [];
+    (Array.isArray(v) ? v : []).forEach((e) => {
+      if (e && e.length === 2 && typeof e[0] === "string" && Array.isArray(e[1])) { fakeMap[e[0]] = e[1]; fakeList.push(e[0]); }
+    });
+  }
+  function persistFakes() {
+    try { chrome.storage.local.set({ cdFakes: fakeList.map((s) => [s, fakeMap[s]]) }); } catch (e) {}
+  }
+  function bakeFake(sig, seq) {                 // remember a roll's displayed colours (once)
+    fakeMap[sig] = seq; fakeList.push(sig);
+    if (fakeList.length > FAKE_CAP) delete fakeMap[fakeList.shift()];
+    fakesDirty = true;
   }
 
-  // Pick a replacement for a blocked die. Chosen from the colours that are NOT
-  // blocked (so a hidden colour never maps onto another hidden colour) and varied
-  // by the die's POSITION in its row — so several blocked dice in one roll swap to
-  // DIFFERENT colours instead of all the same. It's deterministic in
-  // (colour, position, per-load salt), so a die on the table and its twin in the
-  // history (same roll, same position) always swap to the SAME colour and match.
+  // accept legacy single-string / array storage; return one colour name or null
+  function firstColor(v) {
+    if (Array.isArray(v)) { const f = v.filter((c) => COLORS.indexOf(c) !== -1); return f.length ? f[0] : null; }
+    if (typeof v === "string" && COLORS.indexOf(v) !== -1) return v;
+    return null;
+  }
+
+  // Pick a replacement colour for a blocked die: any colour OTHER than the blocked
+  // one, walked by position so several blocked dice in a roll get DISTINCT colours.
+  // Deterministic per (blocked colour, position, per-load salt) so a die and its
+  // history twin (same roll + position) resolve to the same colour.
   const SALT = (Math.random() * 1e9) | 0;
   function hashStr(s) {
     let h = 2166136261;
     for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
     return h >>> 0;
   }
-  function replacementForDie(c, pos) {
-    const pool = COLORS.filter((x) => !isBlocked(x));
-    if (!pool.length) return null;                       // everything blocked: give up
-    // walk the pool by position from a per-colour start, so consecutive positions
-    // land on DISTINCT colours — blocked dice of the same colour in one roll never
-    // all look the same (until the pool is exhausted).
-    const start = hashStr(c + ":" + SALT) % pool.length;
+  function replacementColor(blocked, pos) {
+    const pool = COLORS.filter((x) => x !== blocked);
+    if (!pool.length) return null;
+    const start = hashStr(blocked + ":" + SALT) % pool.length;
     return pool[(start + pos) % pool.length];
+  }
+  // the displayed sequence for a roll: hide `blocked` (varied by position), keep rest
+  function computeFakeSeq(real, blocked) {
+    if (!blocked) return real.slice();
+    return real.map((c, i) => (c === blocked ? (replacementColor(blocked, i) || c) : c));
   }
 
   // classify an "rgb(...)" string into one of the 6 buckets by hue
@@ -115,7 +131,7 @@
 
   // collect EVERY die-shaped coloured square on the page: the main rolled dice
   // PLUS the small squares in "YOUR LAST 20 ROLLS" (THIS ROLL / PREVIOUS ROLLS)
-  // and the STATS row, so a blocked colour is hidden consistently everywhere.
+  // and the STATS row.
   function dice() {
     const out = [];
     const seen = new Set();
@@ -146,9 +162,8 @@
     return out;
   }
 
-  // exact colour string sampled from a genuine die of each bucket, so our swap
-  // uses the site's real shade (and matches whatever theme is selected) instead
-  // of a hardcoded guess that can look a touch lighter/darker than the real one.
+  // exact colour string sampled from a genuine die of each bucket, so our swap uses
+  // the site's real shade (and matches whatever theme is selected).
   const palette = {};
   function samplePalette(found) {
     found.forEach((d) => {
@@ -160,26 +175,35 @@
     return palette[name] || CSS[name];            // real shade if known, else fallback
   }
 
-  // paint a square the given colour, but only when it isn't already showing it.
-  // The guard compares the square's CURRENT colour bucket to the target, so the
-  // rig (which re-runs on every DOM mutation) neither rewrites identical styles
-  // — avoiding a ping-pong with the MutationObserver — nor misses a square the
-  // site has just re-rendered back to a real colour.
+  // a die's REAL colour: what it was before we touched it (remembered), else current
+  function realBucketOf(d) { return d.el.dataset.cdBucket || d.bucket; }
+
+  // paint a square a colour, but only when it isn't already showing it (the guard
+  // avoids rewriting identical styles and ping-ponging with the MutationObserver).
   function setColour(d, bucketName) {
     if (!bucketName || d.bucket === bucketName) return;
     d.el.style.setProperty(d.prop, colourFor(bucketName), "important");
     d.bucket = bucketName;
   }
+  // make a die show `target`; remember its real colour so we can restore it later
+  function applyTarget(d, target, real) {
+    if (!target) target = real;
+    if (target === real) {
+      if (d.el.dataset.cdRigged) { setColour(d, real); delete d.el.dataset.cdRigged; delete d.el.dataset.cdBucket; }
+    } else {
+      d.el.dataset.cdRigged = "1";
+      d.el.dataset.cdBucket = real;
+      setColour(d, target);
+    }
+  }
 
-  // group dice into visual rows (by top edge) and index each one left-to-right, so
-  // a die's "position in its roll" can drive a varied-but-consistent replacement.
-  // A table die and its history twin sit in different rows but at the same index,
-  // so they resolve to the same colour; dice at different indexes can differ.
-  function assignPositions(found) {
+  // group dice into visual rows (by top edge), index them left-to-right, and tag
+  // each with its row's REAL-colour signature and length.
+  function assignRows(found) {
     const rows = [];
     found.forEach((d) => {
       const r = d.el.getBoundingClientRect();
-      d._left = r.left;
+      d._left = r.left; d._real = realBucketOf(d);
       let row = null;
       for (let i = 0; i < rows.length; i++) { if (Math.abs(rows[i].top - r.top) <= 14) { row = rows[i]; break; } }
       if (!row) { row = { top: r.top, items: [] }; rows.push(row); }
@@ -187,37 +211,39 @@
     });
     rows.forEach((row) => {
       row.items.sort((a, b) => a._left - b._left);
-      row.items.forEach((d, i) => { d.pos = i; });
+      const sig = row.items.map((d) => d._real).join(",");
+      row.items.forEach((d, i) => { d.pos = i; d.rowSig = sig; d.rowLen = row.items.length; });
     });
+  }
+
+  // how many dice make up a roll (from the URL: /roll-color-dice/<n>/)
+  function diceCount() {
+    const m = location.pathname.match(/roll-color-dice\/(\d+)/);
+    return m ? +m[1] : 4;
   }
 
   function applyRig() {
     const found = dice();
     samplePalette(found);                          // learn the site's shades first
-    assignPositions(found);                        // index each die within its row
+    assignRows(found);
+    const dc = diceCount();
+
     found.forEach((d) => {
-      // a square we already swapped: keep it hidden if its colour is still
-      // blocked; if its colour was un-blocked, restore the real colour & forget.
-      if (d.el.dataset.cdRigged) {
-        const orig = d.el.dataset.cdBucket;
-        if (orig && isBlocked(orig)) {
-          setColour(d, replacementForDie(orig, d.pos));
-        } else {
-          setColour(d, orig);
-          delete d.el.dataset.cdRigged;
-          delete d.el.dataset.cdBucket;
-        }
-        return;
+      const real = d._real;
+      if (d.rowLen === dc) {
+        // a roll row: bake its fake the first time we see it, then replay it. This
+        // is what makes a past roll keep its colours after you block something else.
+        if (!(d.rowSig in fakeMap)) bakeFake(d.rowSig, computeFakeSeq(d.rowSig.split(","), armed));
+        const seq = fakeMap[d.rowSig];
+        applyTarget(d, seq ? seq[d.pos] : real, real);
+      } else {
+        // stats / streak / anything else: leave it as the real colour
+        applyTarget(d, real, real);
       }
-      // a genuine square whose colour is blocked: swap it and remember what it was
-      if (!isBlocked(d.bucket)) return;
-      const rc = replacementForDie(d.bucket, d.pos);
-      if (!rc) return;
-      d.el.dataset.cdRigged = "1";
-      d.el.dataset.cdBucket = d.bucket;
-      setColour(d, rc);
     });
-    try { console.log("[ColorDice] active:", activeSet.join(",") || "(none)", "armed:", armedSet.join(",") || "(none)", "| squares:", found.length); } catch (e) {}
+
+    if (fakesDirty) { fakesDirty = false; persistFakes(); }
+    try { console.log("[ColorDice] armed:", armed || "(none)", "| rolls remembered:", fakeList.length, "| squares:", found.length); } catch (e) {}
   }
 
   function init() {
@@ -225,27 +251,30 @@
     if (sub) sub.textContent = "Roll Color Dice";
 
     try {
-      chrome.storage.local.get("blocked", (c) => {
-        activeSet = normSet(c && c.blocked);  // freeze what this page hides...
-        armedSet = activeSet.slice();         // ...and start editing from the same set
+      chrome.storage.local.get(["blocked", "cdFakes"], (c) => {
+        armed = firstColor(c && c.blocked);
+        loadFakes(c && c.cdFakes);
         applyRig();
         [120, 350, 700, 1300, 2200, 3500].forEach((ms) => setTimeout(applyRig, ms));
       });
-      // edits made elsewhere (popup, another tab) only change what's armed for the
-      // next roll — they must NOT re-rig the dice already on this page.
       chrome.storage.onChanged.addListener((ch, area) => {
-        if (area === "local" && ch.blocked) armedSet = normSet(ch.blocked.newValue);
+        if (area !== "local") return;
+        if (ch.blocked) armed = firstColor(ch.blocked.newValue);     // selection only → don't touch current dice
+        if (ch.cdFakes) { loadFakes(ch.cdFakes.newValue); applyRig(); } // a bake/clear elsewhere → re-apply
       });
     } catch (e) {}
 
-    function save() { try { chrome.storage.local.set({ blocked: armedSet.slice() }); } catch (x) {} }
+    function saveBlocked() { try { chrome.storage.local.set({ blocked: armed ? [armed] : [] }); } catch (e) {} }
+    function clearAll() {                          // forget every faked roll, show real again (live)
+      armed = null; fakeMap = {}; fakeList = [];
+      try { chrome.storage.local.set({ blocked: [], cdFakes: [] }); } catch (e) {}
+      applyRig();
+    }
 
-    // Only ONE colour is blocked at a time: a number key blocks just that colour
-    // and drops whatever was blocked before; 0 clears. No re-rig here — it takes
-    // effect on the next roll, leaving the dice currently on screen untouched.
+    // 1–6 arm a single colour for your NEXT roll (current dice stay put); 0 resets.
     document.addEventListener("keydown", function (e) {
-      if (KEYMAP[e.key]) { armedSet = [KEYMAP[e.key]]; save(); }
-      else if (e.key === "0") { armedSet = []; save(); }
+      if (KEYMAP[e.key]) { armed = KEYMAP[e.key]; saveBlocked(); }
+      else if (e.key === "0") { clearAll(); }
     });
 
     try {

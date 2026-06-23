@@ -20,16 +20,16 @@
     document.querySelectorAll(".c").forEach((b) => b.classList.toggle("on", set.indexOf(b.dataset.c) !== -1));
     if (set.length) {
       const names = ORDER.filter((c) => set.indexOf(c) !== -1).map((c) => NAMES[c]).join(", ");
-      statusEl.innerHTML = '🚫 Blocking <b>' + names + '</b> — swapped out on your next roll. Click it again to unblock.';
+      statusEl.innerHTML = '🚫 Blocking <b>' + names + '</b> for your next roll. Past rolls keep the colors they were rolled with. Click it again to unblock.';
       statusEl.className = "status on";
     } else {
-      statusEl.textContent = "Nothing blocked — every color rolls normally.";
+      statusEl.textContent = "Nothing armed for the next roll. Past rolls keep their colors — use Clear all to reset.";
       statusEl.className = "status";
     }
   }
 
-  // block only the chosen colour (replacing whatever was blocked); clicking the
-  // colour that's already the sole block clears it.
+  // block only the chosen colour for the NEXT roll (replacing whatever was armed);
+  // clicking the colour that's already armed un-arms it. Past rolls are untouched.
   function setOnly(color) {
     chrome.storage.local.get("blocked", (c) => {
       const set = normSet(c && c.blocked);
@@ -39,8 +39,9 @@
     });
   }
 
+  // full reset: un-arm AND forget every faked past roll (cdFakes), showing real again
   function clearAll() {
-    chrome.storage.local.set({ blocked: [] });
+    chrome.storage.local.set({ blocked: [], cdFakes: [] });
     render([]);
   }
 
